@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\RPGuild.Application\RPGuild.Application.csproj" />
+    <ProjectReference Include="..\RPGuild.Domain\RPGuild.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
