@@ -1,0 +1,47 @@
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+
+# Segredos e ambiente
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+*.pfx
+secrets.json
+
+# Front (Angular / Node)
+node_modules/
+web/dist/
+web/.angular/
+web/coverage/
+npm-debug.log*
+yarn-error.log*
+
+# Back (.NET)
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+coverage*.xml
+
+# Docker / dados locais
+docker-data/
+*.dump
+*.sql.gz
+
+# Documentos de escritório (o projeto usa Markdown)
+*.docx
+~$*
