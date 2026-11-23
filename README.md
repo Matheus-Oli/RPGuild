@@ -41,4 +41,3 @@ Fluxo de branches, commits e PRs em [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Licenças de conteúdo
 
 O conteúdo de regras de D&D vem do SRD 5.2 e 5.1, da Wizards of the Coast, sob CC-BY-4.0.
-# RPGuild
