@@ -41,7 +41,7 @@ public sealed class MeTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        var avatar = $"avatars/{ClaimsDoToken.UserId(logado.AccessToken)}/{Guid.NewGuid()}.png";
+        var avatar = logado.NovoAvatar();
         var atualizacao = await cliente.PutAsJsonAsync(Url, new { logado.Dados.Nome, logado.Dados.Nick, avatarPath = avatar });
 
         // Act

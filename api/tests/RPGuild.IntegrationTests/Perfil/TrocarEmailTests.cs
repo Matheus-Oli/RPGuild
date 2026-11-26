@@ -121,7 +121,6 @@ public sealed class TrocarEmailTests(PostgresFixture postgres) : IDisposable
     private async Task<string?> EmailPendenteAsync(UsuarioLogado logado)
     {
         await using var db = postgres.CriarDbContext();
-        var userId = ClaimsDoToken.UserId(logado.AccessToken);
-        return await db.Users.Where(u => u.Id == userId).Select(u => u.EmailPendente).SingleAsync();
+        return await db.Users.Where(u => u.Id == logado.Id).Select(u => u.EmailPendente).SingleAsync();
     }
 }

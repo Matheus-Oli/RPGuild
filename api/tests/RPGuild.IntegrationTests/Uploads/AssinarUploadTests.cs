@@ -19,7 +19,6 @@ public sealed class AssinarUploadTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        var userId = ClaimsDoToken.UserId(logado.AccessToken);
 
         // Act
         var resposta = await cliente.PostAsJsonAsync(Url, new { tipo = "avatar", contentType = "image/png" });
@@ -27,7 +26,7 @@ public sealed class AssinarUploadTests(PostgresFixture postgres) : IDisposable
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.OK);
         var assinatura = (await resposta.Content.ReadFromJsonAsync<UrlDeUploadResponse>())!;
-        assinatura.Path.ShouldMatch($"^avatars/{userId}/[0-9a-f-]{{36}}\\.png$");
+        assinatura.Path.ShouldMatch($"^avatars/{logado.Id}/[0-9a-f-]{{36}}\\.png$");
         assinatura.PublicUrl.ShouldBe(_factory.Storage.ObterUrlPublica(assinatura.Path));
         assinatura.UploadUrl.ShouldNotBeNullOrWhiteSpace();
         _factory.Storage.Criados.ShouldBe([assinatura.Path]);

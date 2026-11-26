@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using RPGuild.Application.Contas;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Auth;
@@ -108,20 +107,14 @@ public sealed class ResetPasswordTests(PostgresFixture postgres) : IDisposable
     }
 
     [Theory]
-    [InlineData("lixo")]
-    [InlineData("token-identity-alterado")]
-    [InlineData("outro-usuario")]
+    [InlineData(TokenAdulterado.Lixo)]
+    [InlineData(TokenAdulterado.TokenIdentityAlterado)]
+    [InlineData(TokenAdulterado.OutroUsuario)]
     public async Task ResetPassword_TokenInvalidoOuAdulterado_Retorna400(string caso)
     {
         // Arrange
         var (_, token) = await _factory.PedirRedefinicaoAsync();
-        var original = TokenDeRedefinicao.Decodificar(token)!;
-        var adulterado = caso switch
-        {
-            "lixo" => "nao-e-um-token",
-            "token-identity-alterado" => (original with { TokenIdentity = original.TokenIdentity + "x" }).Codificar(),
-            _ => (original with { UserId = Guid.NewGuid() }).Codificar(),
-        };
+        var adulterado = TokenAdulterado.Gerar(token, caso);
         using var cliente = _factory.CriarCliente();
 
         // Act

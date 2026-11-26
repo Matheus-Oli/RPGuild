@@ -76,7 +76,7 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
 
         // Act
-        var resposta = await cliente.PutAsJsonAsync(Url, Request(logado, AvatarDe(Guid.NewGuid())));
+        var resposta = await cliente.PutAsJsonAsync(Url, Request(logado, AvatarDeOutroUsuario()));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.BadRequest);
@@ -89,7 +89,7 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        var avatar = AvatarDe(logado);
+        var avatar = logado.NovoAvatar();
 
         // Act
         var resposta = await cliente.PutAsJsonAsync(Url, Request(logado, avatar));
@@ -106,9 +106,9 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        var antigo = AvatarDe(logado);
+        var antigo = logado.NovoAvatar();
         (await cliente.PutAsJsonAsync(Url, Request(logado, antigo))).EnsureSuccessStatusCode();
-        var novo = AvatarDe(logado);
+        var novo = logado.NovoAvatar();
 
         // Act
         var resposta = await cliente.PutAsJsonAsync(Url, Request(logado, novo));
@@ -125,7 +125,7 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        var avatar = AvatarDe(logado);
+        var avatar = logado.NovoAvatar();
         (await cliente.PutAsJsonAsync(Url, Request(logado, avatar))).EnsureSuccessStatusCode();
 
         // Act
@@ -142,7 +142,7 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        var antigo = AvatarDe(logado);
+        var antigo = logado.NovoAvatar();
         (await cliente.PutAsJsonAsync(Url, Request(logado, antigo))).EnsureSuccessStatusCode();
 
         // Act
@@ -160,9 +160,9 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
-        (await cliente.PutAsJsonAsync(Url, Request(logado, AvatarDe(logado)))).EnsureSuccessStatusCode();
+        (await cliente.PutAsJsonAsync(Url, Request(logado, logado.NovoAvatar()))).EnsureSuccessStatusCode();
         _factory.Storage.FalharAoApagar = true;
-        var novo = AvatarDe(logado);
+        var novo = logado.NovoAvatar();
 
         // Act
         var resposta = await cliente.PutAsJsonAsync(Url, Request(logado, novo));
@@ -188,9 +188,7 @@ public sealed class AtualizarPerfilTests(PostgresFixture postgres) : IDisposable
     private static AtualizarPerfil Request(UsuarioLogado logado, string? avatarPath) =>
         new(logado.Dados.Nome, logado.Dados.Nick, avatarPath);
 
-    private static string AvatarDe(UsuarioLogado logado) => AvatarDe(ClaimsDoToken.UserId(logado.AccessToken));
-
-    private static string AvatarDe(Guid userId) => $"avatars/{userId}/{Guid.NewGuid()}.png";
+    private static string AvatarDeOutroUsuario() => $"avatars/{Guid.NewGuid()}/{Guid.NewGuid()}.png";
 
     private sealed record AtualizarPerfil(string Nome, string Nick, string? AvatarPath);
 }

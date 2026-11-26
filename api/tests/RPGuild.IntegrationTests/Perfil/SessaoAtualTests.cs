@@ -18,7 +18,7 @@ public sealed class SessaoAtualTests(PostgresFixture postgres) : IDisposable
         var logado = await _factory.CriarUsuarioELogarAsync();
 
         // Assert
-        var familia = await FamiliaUnicaDoUsuarioAsync(ClaimsDoToken.UserId(logado.AccessToken));
+        var familia = await FamiliaUnicaDoUsuarioAsync(logado.Id);
         ClaimsDoToken.Sid(logado.AccessToken).ShouldBe(familia);
     }
 
@@ -35,7 +35,7 @@ public sealed class SessaoAtualTests(PostgresFixture postgres) : IDisposable
         // Assert
         resposta.EnsureSuccessStatusCode();
         var novo = (await resposta.Content.ReadFromJsonAsync<TokenResponse>())!;
-        var familia = await FamiliaUnicaDoUsuarioAsync(ClaimsDoToken.UserId(logado.AccessToken));
+        var familia = await FamiliaUnicaDoUsuarioAsync(logado.Id);
         ClaimsDoToken.Sid(novo.AccessToken).ShouldBe(familia);
         ClaimsDoToken.Sid(novo.AccessToken).ShouldBe(ClaimsDoToken.Sid(logado.AccessToken));
     }

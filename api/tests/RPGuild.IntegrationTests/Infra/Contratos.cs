@@ -14,7 +14,15 @@ public sealed record NovoUsuario(string Nome, string Nick, string Email, string 
     }
 }
 
-public sealed record UsuarioLogado(NovoUsuario Dados, string AccessToken, string RefreshCookie);
+public sealed record UsuarioLogado(NovoUsuario Dados, string AccessToken, string RefreshCookie)
+{
+    public Guid Id => ClaimsDoToken.UserId(AccessToken);
+
+    /// <summary>
+    /// Path de avatar novo na pasta do usuário, como o que o POST /api/uploads/sign gera.
+    /// </summary>
+    public string NovoAvatar() => $"avatars/{Id}/{Guid.NewGuid()}.png";
+}
 
 public sealed record TokenResponse(string AccessToken, DateTimeOffset ExpiresAt);
 

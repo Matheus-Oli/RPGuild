@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
-using RPGuild.Application.Contas;
 using RPGuild.IntegrationTests.Infra;
-using PerfilResponse = RPGuild.IntegrationTests.Infra.PerfilResponse;
 
 namespace RPGuild.IntegrationTests.Perfil;
 
@@ -37,7 +35,7 @@ public sealed class ConfirmarEmailTests(PostgresFixture postgres) : IDisposable
         loginAntigo.DeveSerProblema(HttpStatusCode.Unauthorized);
 
         await using var db = postgres.CriarDbContext();
-        var usuario = await db.Users.SingleAsync(u => u.Id == ClaimsDoToken.UserId(logado.AccessToken));
+        var usuario = await db.Users.SingleAsync(u => u.Id == logado.Id);
         usuario.EmailPendente.ShouldBeNull();
         usuario.UserName.ShouldBe(novoEmail);
     }
@@ -110,21 +108,15 @@ public sealed class ConfirmarEmailTests(PostgresFixture postgres) : IDisposable
     }
 
     [Theory]
-    [InlineData("lixo")]
-    [InlineData("token-identity-alterado")]
-    [InlineData("outro-usuario")]
+    [InlineData(TokenAdulterado.Lixo)]
+    [InlineData(TokenAdulterado.TokenIdentityAlterado)]
+    [InlineData(TokenAdulterado.OutroUsuario)]
     public async Task Confirm_TokenInvalidoOuAdulterado_Retorna400SemTrocarOEmail(string caso)
     {
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
         var (_, token) = await _factory.PedirTrocaDeEmailAsync(logado);
-        var original = TokenDeRedefinicao.Decodificar(token)!;
-        var adulterado = caso switch
-        {
-            "lixo" => "nao-e-um-token",
-            "token-identity-alterado" => (original with { TokenIdentity = original.TokenIdentity + "x" }).Codificar(),
-            _ => (original with { UserId = Guid.NewGuid() }).Codificar(),
-        };
+        var adulterado = TokenAdulterado.Gerar(token, caso);
         using var cliente = _factory.CriarCliente();
 
         // Act
