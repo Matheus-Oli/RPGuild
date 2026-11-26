@@ -1,7 +1,9 @@
 using Hangfire;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.OpenApi;
 using RPGuild.Api.Configuracao;
 using RPGuild.Api.Http;
+using RPGuild.Api.TempoReal;
 using RPGuild.Application;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Infrastructure;
@@ -24,6 +26,8 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<ValidacaoFilter>();
 });
 builder.Services.AddProblemDetails();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, UsuarioPeloSub>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -75,6 +79,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>(NotificationHub.Rota);
 app.MapHealthChecks("/health");
 
 if (hangfireHabilitado)
