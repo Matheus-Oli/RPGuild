@@ -491,7 +491,7 @@ DELETE /notifications/{id}
 
 ```
 /hubs/campaign JoinCampaign(id) · CharacterUpdated · RollCreated · MemberChanged · SessionChanged · DocumentChanged
-/hubs/notifications NotificationCreated · UnreadCount
+/hubs/notifications NotificationCreated · UnreadCount · NotificationRead · NotificationsReadAll · NotificationDeleted
 ```
 
 ## Backlog e sprints

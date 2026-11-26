@@ -311,6 +311,38 @@ Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso
 
 Nos testes, `NotificacoesDeTeste` grava notificações direto no banco, com o `created_at` controlável (`CriarNotificacaoAsync`), e lê as do usuário (`NotificacoesNoBancoAsync`).
 
+## Tempo real
+
+SignalR (sem backplane: a API roda numa VM só). O hub `NotificationHub` fica em **`/hubs/notifications`**, com `[Authorize]`. O cliente não chama nenhum método: o hub só empurra os eventos do sininho.
+
+**Autenticação**
+
+- É o mesmo JWT da API. No navegador, o WebSocket não manda header, então o token vai na query: `/hubs/notifications?access_token=<token>` (no `@microsoft/signalr`, use o `accessTokenFactory`).
+- A query `access_token` **só vale em caminhos que começam com `/hubs`** (`JwtBearerEvents.OnMessageReceived`). Num endpoint REST ela é ignorada, e sem header dá 401.
+- Token ausente, inválido ou expirado: a conexão é recusada (401 no negotiate).
+- O token não vai para o log. O único log que imprime a URL com a query é o de início e fim de requisição (`Microsoft.AspNetCore.Hosting.Diagnostics`). O `Program` trava esse log em `Warning`, mesmo que a configuração suba `Microsoft.AspNetCore` para Information.
+- **O front precisa reconectar com um token novo depois do refresh:** o access token vale 15 min, e a conexão aberta não troca de token sozinha.
+
+**Destino:** `Clients.User(userId)`, com o `UsuarioPeloSub` (`IUserIdProvider`) lendo a claim `sub`. Todas as conexões do usuário recebem: várias abas e vários aparelhos.
+
+**Eventos** (payload em camelCase; saem só **depois** de gravar no banco):
+
+| Evento | Quando | Payload |
+| --- | --- | --- |
+| `NotificationCreated` | o serviço central grava uma notificação no sininho | o item no mesmo formato do `GET /api/notifications`: `{id, tipo, dados, lida, criadoEm}` |
+| `UnreadCount` | depois de criar, ler, ler todas ou apagar | `{total}` (recontado no banco) |
+| `NotificationRead` | `POST /api/notifications/{id}/read` que mudou o estado | `{id}` |
+| `NotificationsReadAll` | `POST /api/notifications/read-all` | `{}` |
+| `NotificationDeleted` | `DELETE /api/notifications/{id}` | `{id}` |
+
+- Ler de novo uma notificação já lida não manda nada: nem `NotificationRead` nem `UnreadCount`.
+- Ação na notificação de outro usuário (404) não manda nada para ninguém.
+- A emissão fica num lugar só, o `EventosDoSininho` (Application), usado pelo `Notificador` e pelo `NotificacoesService`. A porta é a `INotificacoesTempoReal`, implementada na Api por `HubNotificacoesTempoReal` (`IHubContext<NotificationHub>`).
+- **Falha ao empurrar não quebra a requisição:** o `EventosDoSininho` loga um Warning (só o nome do evento, sem dados pessoais) e segue. O que foi gravado aparece no `GET`.
+- CORS: o hub usa a mesma policy `Front`, com credenciais.
+
+Nos testes, `ConexaoNoHub` abre a conexão pelo TestServer, com transporte LongPolling e o token na query, sem header. Ele guarda os eventos recebidos e tem `EsperarAsync`/`NaoRecebeAsync`, com timeout curto. `LogsCapturados` captura as linhas de log da API.
+
 ## Jobs (Hangfire)
 
 Hangfire (`Hangfire.AspNetCore` + `Hangfire.PostgreSql`) com storage no mesmo Postgres, no schema `hangfire`, que a própria lib cria. Não há migration do EF para essas tabelas, e o Respawn dos testes não mexe nesse schema. O Hangfire puxa o `Newtonsoft.Json` 11.0.1, que tem vulnerabilidade conhecida; o `RPGuild.Infrastructure` fixa a 13.0.4.
