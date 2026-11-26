@@ -111,9 +111,11 @@ ASP.NET Identity (sem roles) para usuários e senhas, JWT para o access token e 
 | `POST /api/auth/login` | `{email, senha}` | 200 `{accessToken, expiresAt}` + cookie `rpguild_refresh` |
 | `POST /api/auth/refresh` | cookie | 200 `{accessToken, expiresAt}` + cookie novo |
 | `POST /api/auth/logout` | cookie | 204, revoga o refresh e apaga o cookie |
+| `POST /api/auth/forgot-password` | `{email}` | 204 e manda o link por e-mail · 404 se o e-mail não tem conta |
+| `POST /api/auth/reset-password` | `{token, novaSenha}` | 204 · 400 se o token for inválido, usado ou vencido, ou se a senha não seguir a política |
 | `GET /api/me` | `Authorization: Bearer <token>` | 200 `{id, nome, nick, email, avatarPath}` |
 
-Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) · 401 credencial ou sessão inválida (mensagem genérica, sem dizer se foi o e-mail ou a senha) · 409 e-mail ou nick em uso · 423 conta bloqueada.
+Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) ou token de redefinição inválido · 401 credencial ou sessão inválida (mensagem genérica, sem dizer se foi o e-mail ou a senha) · 404 e-mail não cadastrado (forgot-password) · 409 e-mail ou nick em uso · 423 conta bloqueada.
 
 **Fluxo**
 
@@ -123,6 +125,14 @@ Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) · 4
 4. **Reuso:** se chegar um refresh já revogado, alguém pode ter copiado o cookie. A família inteira é revogada e a resposta é 401: os dois lados precisam entrar de novo.
 5. **Lockout:** 5 senhas erradas bloqueiam a conta por 15 minutos (423).
 6. **Regras de conta:** nick com 3 a 20 caracteres (`A-Z`, `a-z`, `0-9`, `_`), único sem diferenciar caixa (`nick_normalizado`); e-mail único; senha com 8+ caracteres, uma letra e um número.
+
+**Recuperação de senha**
+
+1. `forgot-password` com um e-mail que **não** tem conta responde 404. Com conta, responde 204 e manda o e-mail com o link `{Front:BaseUrl}/redefinir-senha?token=<token>`. O e-mail não vai na URL.
+2. O token é opaco: `Base64Url("{userId}:{token do Identity}")`, gerado por `GeneratePasswordResetTokenAsync`. Ele vale **1 hora** (`DataProtectionTokenProviderOptions.TokenLifespan`).
+3. **Uso único:** o reset troca o security stamp do usuário, e o token usado (e qualquer outro emitido antes dele) deixa de valer.
+4. Depois do reset, **todas as sessões caem**: todos os refresh tokens do usuário são revogados e é preciso entrar de novo. O lockout não muda.
+5. As chaves do Data Protection, que assinam o token, ficam no Postgres (`data_protection_keys`, app `RPGuild`). Assim o link continua valendo depois de reiniciar a API.
 
 No front, as chamadas a `/api/auth/*` precisam de `credentials: "include"` para o navegador mandar e receber o cookie.
 
@@ -134,13 +144,42 @@ No front, as chamadas a `/api/auth/*` precisam de `credentials: "include"` para 
 | `Jwt:Issuer` | Emissor do token | `rpguild-api` | `Jwt__Issuer` |
 | `Jwt:Audience` | Público do token | `rpguild-web` | `Jwt__Audience` |
 | `Cors:Origins` | Origens do front (com `AllowCredentials`) | `http://localhost:5173` | `Cors__Origins__0`, `Cors__Origins__1`... |
+| `Front:BaseUrl` | Base dos links nos e-mails (obrigatória; sem ela a API não sobe) | `http://localhost:5173` | `Front__BaseUrl` |
 
-Nos testes, a `RPGuildApiFactory` define uma chave própria e aceita um `TimeProvider` (por exemplo `FakeTimeProvider`) para controlar o relógio. O helper `CriarUsuarioELogarAsync()` devolve o access token e o cookie de refresh.
+Nos testes, a `RPGuildApiFactory` define uma chave própria e aceita um `TimeProvider` (por exemplo `FakeTimeProvider`) para controlar o relógio. O helper `CriarUsuarioELogarAsync()` devolve o access token e o cookie de refresh. O `PedirRedefinicaoAsync()` devolve o token de redefinição que veio no e-mail.
+
+## E-mail
+
+E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem dois: boas-vindas (depois do register) e redefinição de senha (no forgot-password).
+
+**Senha de app do Gmail**
+
+1. Na conta Google que vai enviar, ative a verificação em duas etapas (myaccount.google.com/security).
+2. Abra myaccount.google.com/apppasswords, crie uma senha de app (por exemplo "RPGuild") e copie os 16 caracteres.
+3. Use essa senha em `Email__Senha`. A senha normal da conta não funciona por SMTP.
+
+**Configuração**
+
+| Chave | Valor | Onde |
+| --- | --- | --- |
+| `Email:Host` · `Email:Port` · `Email:UseStartTls` | `smtp.gmail.com` · `587` · `true` | `appsettings.json` |
+| `Email:RemetenteNome` | `RPGuild` | `appsettings.json` |
+| `Email:Usuario` | o endereço Gmail que envia | `.env` (dev) / `Email__Usuario` (produção) |
+| `Email:Senha` | a senha de app | `.env` (dev) / `Email__Senha` (produção) |
+| `Email:RemetenteEmail` | o endereço do remetente (o mesmo Gmail) | `.env` (dev) / `Email__RemetenteEmail` (produção) |
+
+Em dev, as credenciais ficam no `.env` da raiz do monorepo, que está no `.gitignore`. Copie do `.env.example` e preencha `Email__Usuario`, `Email__Senha` e `Email__RemetenteEmail`. A API carrega o `.env` com o DotNetEnv **só em Development** (os valores dele valem mais que os de variáveis de ambiente). Em produção, tudo vem de variáveis de ambiente. Nenhuma credencial vai para arquivo versionado.
+
+**Comportamento**
+
+- Sem `Email:Host`, `Email:Port`, `Email:Usuario`, `Email:Senha` ou `Email:RemetenteEmail`, a API **não sobe**, e a mensagem diz quais chaves faltam. Isso também vale para os comandos `dotnet ef`, que sobem a API em Development: o `.env` precisa estar preenchido.
+- Se o envio falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (201 no register, 204 no forgot-password). A falha vai para o log (`ILogger`) com o assunto e o destinatário, sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`, o ponto único de envio dos casos de uso. Ainda não há reenvio; está anotado `TODO(hangfire)` para mover o envio para uma fila.
+- Nos testes, a `RPGuildApiFactory` troca o SMTP por um `FakeEmailSender`, que guarda as mensagens em memória (`factory.Emails.UltimaPara(email)`). O `SmtpEmailSender` não tem teste automatizado; ele é validado manualmente com o Gmail.
 
 ## Testes
 
 - `RPGuild.UnitTests`: regras de Domain e Application, organizadas por módulo (`Contas/`, `Fichas/`, ...). `Arquitetura/` verifica a regra de dependência entre camadas (NetArchTest).
-- `RPGuild.IntegrationTests`: endpoints, banco e EF Core. `Infra/` tem a `PostgresFixture` (container `postgres:17-alpine`, um por execução, via coleção `Integration`, com as migrations já aplicadas) e a `RPGuildApiFactory` (ambiente `Testing`, `ConnectionStrings:Default` apontando para o container).
+- `RPGuild.IntegrationTests`: endpoints, banco e EF Core. `Infra/` tem a `PostgresFixture` (container `postgres:17-alpine` reaproveitado entre execuções em dev, compartilhado pela coleção `Integration`, com as migrations já aplicadas e os dados limpos pelo Respawn) e a `RPGuildApiFactory` (ambiente `Testing`, `ConnectionStrings:Default` apontando para o container).
 - Bibliotecas: xUnit, Shouldly, NSubstitute, NetArchTest, Testcontainers.
 
 ```bash
