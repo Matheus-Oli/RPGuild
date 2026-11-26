@@ -16,4 +16,9 @@ public static class TiposDeImagem
     public static IReadOnlyCollection<string> Permitidos => Extensoes.Keys;
 
     public static bool EhPermitido(string? contentType) => contentType is not null && Extensoes.ContainsKey(contentType);
+
+    public static string Extensao(string contentType) =>
+        Extensoes.TryGetValue(contentType, out var extensao)
+            ? extensao
+            : throw new ArgumentException($"Tipo de imagem não permitido: {contentType}.", nameof(contentType));
 }
