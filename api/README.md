@@ -125,7 +125,7 @@ Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) ou t
 2. **Refresh token** (64 bytes aleatórios, 14 dias): vai **só** no cookie `rpguild_refresh` (`HttpOnly`, `Secure`, `SameSite=None`, `Path=/api/auth`), nunca no corpo. No banco (`refresh_tokens`) fica só o hash SHA-256.
 3. **Rotação:** cada `refresh` revoga o token usado (`revoked_at`, `replaced_by_id`) e emite outro na mesma família (`family_id`). Cada login começa uma família nova.
 4. **Reuso:** se chegar um refresh já revogado, alguém pode ter copiado o cookie. A família inteira é revogada e a resposta é 401: os dois lados precisam entrar de novo.
-5. **Lockout:** 5 senhas erradas bloqueiam a conta por 15 minutos (423).
+5. **Lockout:** 5 senhas erradas bloqueiam a conta por 15 minutos (423). A senha atual errada em `PUT /api/me/email` e `PUT /api/me/password` também conta, no mesmo contador do login (`AccessFailedAsync`). Com a conta bloqueada, os dois endpoints respondem 423 como o login, mesmo com a senha certa, e a senha certa zera o contador.
 6. **Regras de conta:** nick com 3 a 20 caracteres (`A-Z`, `a-z`, `0-9`, `_`), único sem diferenciar caixa (`nick_normalizado`); e-mail único; senha com 8+ caracteres, uma letra e um número.
 
 **Recuperação de senha**
@@ -158,9 +158,9 @@ Endpoints do usuário logado. Todos exigem `Authorization: Bearer`, menos o `con
 | --- | --- | --- |
 | `GET /api/me` | — | 200 `{id, nome, nick, email, avatarPath, avatarUrl}` |
 | `PUT /api/me` | `{nome, nick, avatarPath?}` | 200 com o perfil · 400 avatar fora da pasta do usuário · 409 nick em uso |
-| `PUT /api/me/email` | `{novoEmail, senha}` | 202 e manda a confirmação para o novo endereço · 400 senha incorreta ou mesmo e-mail · 409 e-mail em uso |
+| `PUT /api/me/email` | `{novoEmail, senha}` | 202 e manda a confirmação para o novo endereço · 400 senha incorreta ou mesmo e-mail · 409 e-mail em uso · 423 conta bloqueada |
 | `POST /api/me/email/confirm` | `{token}` (anônimo; Bearer opcional) | 204 · 400 token inválido, usado ou vencido · 409 e-mail tomado depois do pedido |
-| `PUT /api/me/password` | `{atual, nova}` | 204 · 400 senha atual incorreta ou nova fora da política |
+| `PUT /api/me/password` | `{atual, nova}` | 204 · 400 senha atual incorreta ou nova fora da política · 423 conta bloqueada |
 
 **Nome, nick e avatar (`PUT /api/me`)**
 
