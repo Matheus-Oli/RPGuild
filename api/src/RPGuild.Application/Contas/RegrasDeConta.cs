@@ -14,4 +14,11 @@ public static class RegrasDeConta
         .NotEmpty().WithMessage("Informe o e-mail.")
         .MaximumLength(EmailTamanhoMaximo).WithMessage($"O e-mail pode ter no máximo {EmailTamanhoMaximo} caracteres.")
         .EmailAddress().WithMessage("E-mail inválido.");
+
+    public static IRuleBuilderOptions<T, string> Senha<T>(this IRuleBuilderInitial<T, string> regra) => regra
+        .Cascade(CascadeMode.Stop)
+        .NotEmpty().WithMessage("Informe a senha.")
+        .MinimumLength(SenhaTamanhoMinimo).WithMessage($"A senha precisa de pelo menos {SenhaTamanhoMinimo} caracteres.")
+        .Must(senha => senha.Any(char.IsLetter)).WithMessage("A senha precisa de pelo menos uma letra.")
+        .Must(senha => senha.Any(char.IsDigit)).WithMessage("A senha precisa de pelo menos um número.");
 }

@@ -18,12 +18,6 @@ public sealed class RegistrarRequestValidator : AbstractValidator<RegistrarReque
 
         RuleFor(r => r.Email).Email();
 
-        RuleFor(r => r.Senha)
-            .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("Informe a senha.")
-            .MinimumLength(RegrasDeConta.SenhaTamanhoMinimo)
-            .WithMessage($"A senha precisa de pelo menos {RegrasDeConta.SenhaTamanhoMinimo} caracteres.")
-            .Must(senha => senha.Any(char.IsLetter)).WithMessage("A senha precisa de pelo menos uma letra.")
-            .Must(senha => senha.Any(char.IsDigit)).WithMessage("A senha precisa de pelo menos um número.");
+        RuleFor(r => r.Senha).Senha();
     }
 }

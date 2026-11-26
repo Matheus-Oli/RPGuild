@@ -8,12 +8,6 @@ public sealed class RedefinirSenhaRequestValidator : AbstractValidator<Redefinir
     {
         RuleFor(r => r.Token).NotEmpty().WithMessage("Informe o token.");
 
-        RuleFor(r => r.NovaSenha)
-            .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("Informe a senha.")
-            .MinimumLength(RegrasDeConta.SenhaTamanhoMinimo)
-            .WithMessage($"A senha precisa de pelo menos {RegrasDeConta.SenhaTamanhoMinimo} caracteres.")
-            .Must(senha => senha.Any(char.IsLetter)).WithMessage("A senha precisa de pelo menos uma letra.")
-            .Must(senha => senha.Any(char.IsDigit)).WithMessage("A senha precisa de pelo menos um número.");
+        RuleFor(r => r.NovaSenha).Senha();
     }
 }
