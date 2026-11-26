@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Domain.Contas;
@@ -5,7 +6,11 @@ using RPGuild.Domain.Contas;
 namespace RPGuild.Application.Contas;
 
 public sealed class AuthService(
-    IIdentityService identity, ITokenService tokens, RefreshTokenService refreshTokens, IEmailSender emails) : IAuthService
+    IIdentityService identity,
+    ITokenService tokens,
+    RefreshTokenService refreshTokens,
+    IEmailSender emails,
+    ILogger<AuthService> logger) : IAuthService
 {
     public async Task<Resultado<UsuarioResponse>> RegistrarAsync(RegistrarRequest request, CancellationToken cancellationToken)
     {
@@ -15,7 +20,17 @@ public sealed class AuthService(
         if (criado.Sucesso)
         {
             var usuario = criado.Valor!;
-            await emails.EnviarAsync(EmailTemplates.BoasVindas(usuario.Nome, usuario.Email), cancellationToken);
+            var mensagem = EmailTemplates.BoasVindas(usuario.Nome, usuario.Email);
+            try
+            {
+                // TODO(hangfire): mover envio para fila
+                await emails.EnviarAsync(mensagem, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // A conta já foi criada; o e-mail perdido não deve virar erro para o usuário.
+                logger.LogError(ex, "Falha ao enviar o e-mail \"{Assunto}\" para {Para}", mensagem.Assunto, mensagem.Para);
+            }
         }
 
         return criado;
