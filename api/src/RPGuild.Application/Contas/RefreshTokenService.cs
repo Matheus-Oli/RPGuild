@@ -52,6 +52,18 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         return emitido;
     }
 
+    public async Task RevogarAsync(string token, CancellationToken cancellationToken)
+    {
+        var atual = await repositorio.BuscarPorHashAsync(CalcularHash(token), cancellationToken);
+        if (atual is null || atual.EstaRevogado)
+        {
+            return;
+        }
+
+        atual.Revogar(relogio.GetUtcNow());
+        await repositorio.SalvarAlteracoesAsync(cancellationToken);
+    }
+
     private async Task RevogarFamiliaAsync(Guid familyId, DateTimeOffset agora, CancellationToken cancellationToken)
     {
         foreach (var token in await repositorio.ListarDaFamiliaAsync(familyId, cancellationToken))

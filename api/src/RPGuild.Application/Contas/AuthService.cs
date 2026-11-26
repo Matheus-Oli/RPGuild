@@ -46,6 +46,15 @@ public sealed class AuthService(IIdentityService identity, ITokenService tokens,
         return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
     }
 
+    public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)
+    {
+        // Logout é idempotente: sem cookie ou com token já revogado, só não há o que revogar.
+        if (!string.IsNullOrWhiteSpace(refreshToken))
+        {
+            await refreshTokens.RevogarAsync(refreshToken, cancellationToken);
+        }
+    }
+
     public async Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken)
     {
         // Token válido de um usuário que não existe mais: trata como sessão inválida.

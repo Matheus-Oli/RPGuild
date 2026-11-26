@@ -10,5 +10,7 @@ public interface IAuthService
 
     Task<Resultado<SessaoAutenticada>> RenovarAsync(string? refreshToken, CancellationToken cancellationToken);
 
+    Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken);
+
     Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken);
 }

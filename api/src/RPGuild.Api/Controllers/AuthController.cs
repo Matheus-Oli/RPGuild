@@ -33,6 +33,15 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
         return this.ParaResposta(resultado, Sessao);
     }
 
+    [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    {
+        await auth.LogoutAsync(RefreshCookie.Ler(Request), cancellationToken);
+        RefreshCookie.Apagar(Response);
+        return NoContent();
+    }
+
     private OkObjectResult Sessao(SessaoAutenticada sessao)
     {
         RefreshCookie.Definir(Response, sessao.Refresh);
