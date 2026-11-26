@@ -60,11 +60,24 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         string email, string senha, CancellationToken cancellationToken)
     {
         var usuario = await userManager.FindByEmailAsync(email);
-        if (usuario is null || !await userManager.CheckPasswordAsync(usuario, senha))
+        if (usuario is null)
         {
             // Mesma resposta para e-mail inexistente e senha errada: não revela quais e-mails têm conta.
             return ErrosDeConta.CredenciaisInvalidas;
         }
+
+        if (await userManager.IsLockedOutAsync(usuario))
+        {
+            return ErrosDeConta.ContaBloqueada;
+        }
+
+        if (!await userManager.CheckPasswordAsync(usuario, senha))
+        {
+            await userManager.AccessFailedAsync(usuario);
+            return await userManager.IsLockedOutAsync(usuario) ? ErrosDeConta.ContaBloqueada : ErrosDeConta.CredenciaisInvalidas;
+        }
+
+        await userManager.ResetAccessFailedCountAsync(usuario);
 
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
     }

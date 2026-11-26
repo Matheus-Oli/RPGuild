@@ -13,6 +13,9 @@ public static class ErrosDeConta
     public static readonly Erro CredenciaisInvalidas = new(
         TipoErro.NaoAutorizado, "Credenciais inválidas", "E-mail ou senha incorretos.");
 
+    public static readonly Erro ContaBloqueada = new(
+        TipoErro.Bloqueado, "Conta bloqueada", "Muitas tentativas de login. Tente de novo em 15 minutos.");
+
     public static readonly Erro SessaoInvalida = new(
         TipoErro.NaoAutorizado, "Sessão inválida", "Sua sessão expirou ou não é válida. Entre novamente.");
 }
