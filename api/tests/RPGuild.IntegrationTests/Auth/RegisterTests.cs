@@ -48,6 +48,23 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
     }
 
     [Fact]
+    public async Task Register_EnvioDoEmailFalhando_Retorna201ECriaOUsuario()
+    {
+        // Arrange
+        await using var factory = new RPGuildApiFactory(postgres, emailSender: new EmailSenderQueFalha());
+        using var cliente = factory.CriarCliente();
+        var usuario = NovoUsuario.Gerar();
+
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Url, usuario);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var login = await cliente.PostAsJsonAsync("/api/auth/login", new { usuario.Email, usuario.Senha });
+        login.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Register_EmailJaEmUso_Retorna409()
     {
         // Arrange

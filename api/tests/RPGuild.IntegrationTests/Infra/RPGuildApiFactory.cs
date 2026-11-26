@@ -9,12 +9,14 @@ using RPGuild.Application.Notificacoes;
 
 namespace RPGuild.IntegrationTests.Infra;
 
-public sealed class RPGuildApiFactory(string connectionString, TimeProvider? relogio = null) : WebApplicationFactory<Program>
+/// <param name="emailSender">Troca o <see cref="FakeEmailSender"/> (ex.: um sender que falha).</param>
+public sealed class RPGuildApiFactory(string connectionString, TimeProvider? relogio = null, IEmailSender? emailSender = null)
+    : WebApplicationFactory<Program>
 {
     public const string JwtKey = "testes-rpguild-chave-hs256-com-pelo-menos-32-bytes-0123456789";
 
-    public RPGuildApiFactory(PostgresFixture postgres, TimeProvider? relogio = null)
-        : this(postgres.ConnectionString, relogio)
+    public RPGuildApiFactory(PostgresFixture postgres, TimeProvider? relogio = null, IEmailSender? emailSender = null)
+        : this(postgres.ConnectionString, relogio, emailSender)
     {
     }
 
@@ -34,7 +36,7 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IEmailSender>();
-            services.AddSingleton<IEmailSender>(Emails);
+            services.AddSingleton(emailSender ?? Emails);
 
             if (relogio is not null)
             {
