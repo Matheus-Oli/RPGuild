@@ -28,7 +28,7 @@ public class NotificadorTests
             _fila,
             new EnvioDeEmail(_envioDireto, NullLogger<EnvioDeEmail>.Instance),
             _identity,
-            new EventosDoSininho(Substitute.For<INotificacoesTempoReal>(), NullLogger<EventosDoSininho>.Instance),
+            new EventosDoSininho(Substitute.For<INotificacoesTempoReal>(), _repositorio, NullLogger<EventosDoSininho>.Instance),
             new FrontOptions { BaseUrl = "http://localhost:5173" },
             new FakeTimeProvider(Agora));
     }

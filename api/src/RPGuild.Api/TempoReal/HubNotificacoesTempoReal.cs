@@ -11,5 +11,8 @@ public sealed class HubNotificacoesTempoReal(IHubContext<NotificationHub> hub) :
     public Task NotificacaoCriadaAsync(Guid userId, NotificacaoResponse notificacao, CancellationToken cancellationToken) =>
         Usuario(userId).SendAsync("NotificationCreated", notificacao, cancellationToken);
 
+    public Task NaoLidasAsync(Guid userId, ContagemDeNaoLidasResponse contagem, CancellationToken cancellationToken) =>
+        Usuario(userId).SendAsync("UnreadCount", contagem, cancellationToken);
+
     private IClientProxy Usuario(Guid userId) => hub.Clients.User(userId.ToString());
 }

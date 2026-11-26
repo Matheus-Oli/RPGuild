@@ -7,4 +7,6 @@ namespace RPGuild.Application.Notificacoes;
 public interface INotificacoesTempoReal
 {
     Task NotificacaoCriadaAsync(Guid userId, NotificacaoResponse notificacao, CancellationToken cancellationToken);
+
+    Task NaoLidasAsync(Guid userId, ContagemDeNaoLidasResponse contagem, CancellationToken cancellationToken);
 }

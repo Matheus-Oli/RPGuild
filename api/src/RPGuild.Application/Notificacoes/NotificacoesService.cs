@@ -5,7 +5,7 @@ namespace RPGuild.Application.Notificacoes;
 /// <summary>
 /// O sininho do usuário logado (/api/notifications). Só enxerga as notificações dele.
 /// </summary>
-public sealed class NotificacoesService(INotificacaoRepository notificacoes, TimeProvider relogio)
+public sealed class NotificacoesService(INotificacaoRepository notificacoes, EventosDoSininho eventos, TimeProvider relogio)
 {
     /// <summary>
     /// As mais novas primeiro, paginadas por cursor. O request já chega validado (cursor decodificável, limite ≥ 1).
@@ -38,8 +38,13 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Tim
             return ErrosDeNotificacoes.NotificacaoNaoEncontrada;
         }
 
-        notificacao.MarcarComoLida(relogio.GetUtcNow());
-        await notificacoes.SalvarAlteracoesAsync(cancellationToken);
+        // Já lida: nada muda, então nenhum evento sai.
+        if (notificacao.MarcarComoLida(relogio.GetUtcNow()))
+        {
+            await notificacoes.SalvarAlteracoesAsync(cancellationToken);
+            await eventos.LidaAsync(userId, cancellationToken);
+        }
+
         return Vazio.Valor;
     }
 
@@ -53,10 +58,14 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Tim
 
         notificacoes.Remover(notificacao);
         await notificacoes.SalvarAlteracoesAsync(cancellationToken);
+        await eventos.ApagadaAsync(userId, cancellationToken);
         return Vazio.Valor;
     }
 
-    public Task MarcarTodasComoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
-        notificacoes.MarcarTodasComoLidasAsync(userId, relogio.GetUtcNow(), cancellationToken);
+    public async Task MarcarTodasComoLidasAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        await notificacoes.MarcarTodasComoLidasAsync(userId, relogio.GetUtcNow(), cancellationToken);
+        await eventos.TodasLidasAsync(userId, cancellationToken);
+    }
 
 }

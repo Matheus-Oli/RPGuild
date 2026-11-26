@@ -27,7 +27,7 @@ public sealed class NotificacaoRepositoryFalso : INotificacaoRepository
     {
         foreach (var notificacao in Notificacoes.Where(n => n.UserId == userId))
         {
-            notificacao.MarcarComoLida(agora);
+            _ = notificacao.MarcarComoLida(agora);
         }
 
         return Task.CompletedTask;

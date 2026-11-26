@@ -37,7 +37,16 @@ public sealed class Notificacao
     };
 
     /// <summary>
-    /// Idempotente: marcar de novo mantém a data da primeira leitura.
+    /// Idempotente: marcar de novo mantém a data da primeira leitura. Devolve se mudou (false se já estava lida).
     /// </summary>
-    public void MarcarComoLida(DateTimeOffset agora) => LidaEm ??= agora;
+    public bool MarcarComoLida(DateTimeOffset agora)
+    {
+        if (Lida)
+        {
+            return false;
+        }
+
+        LidaEm = agora;
+        return true;
+    }
 }
