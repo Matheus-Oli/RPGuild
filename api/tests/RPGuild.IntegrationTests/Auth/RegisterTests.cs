@@ -48,4 +48,21 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
         resposta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
     }
+
+    [Fact]
+    public async Task Register_NickJaEmUsoComOutraCaixa_Retorna409()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var existente = NovoUsuario.Gerar() with { Nick = $"Mestre_{Guid.NewGuid():N}"[..20] };
+        (await cliente.PostAsJsonAsync(Url, existente)).EnsureSuccessStatusCode();
+        var novo = NovoUsuario.Gerar() with { Nick = existente.Nick.ToLowerInvariant() };
+
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Url, novo);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+    }
 }
