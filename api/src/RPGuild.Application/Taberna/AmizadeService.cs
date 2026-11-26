@@ -62,6 +62,23 @@ public sealed class AmizadeService(
         return new PedidoEnviadoResponse(pedido.Id, Usuario(destinatario), pedido.CreatedAt);
     }
 
+    public async Task<IReadOnlyList<AmigoResponse>> ListarAmigosAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var amigos = await amizades.ListarAmigosAsync(userId, cancellationToken);
+        return
+        [
+            .. amigos.Select(a =>
+            {
+                var amigo = Usuario(a.Amigo);
+
+                // TODO(campanhas): calcular campanhas em comum
+                const int campanhasEmComum = 0;
+
+                return new AmigoResponse(amigo.UserId, amigo.Nome, amigo.Nick, amigo.AvatarUrl, campanhasEmComum, a.AmigosDesde);
+            }),
+        ];
+    }
+
     public async Task<PedidosResponse> ListarPedidosAsync(Guid userId, CancellationToken cancellationToken)
     {
         var pendentes = await amizades.ListarPendentesAsync(userId, cancellationToken);

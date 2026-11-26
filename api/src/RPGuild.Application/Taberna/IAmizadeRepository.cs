@@ -16,6 +16,11 @@ public interface IAmizadeRepository
     /// </summary>
     Task<IReadOnlyList<PedidoPendente>> ListarPendentesAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Amizades aceitas do usuário, com o amigo, as mais recentes primeiro (pela data do aceite).
+    /// </summary>
+    Task<IReadOnlyList<AmizadeDaLista>> ListarAmigosAsync(Guid userId, CancellationToken cancellationToken);
+
     Task AdicionarAsync(Amizade amizade, CancellationToken cancellationToken);
 
     void Remover(Amizade amizade);

@@ -22,6 +22,9 @@ public sealed class AmizadeRepositoryFalso : IAmizadeRepository
     public Task<IReadOnlyList<PedidoPendente>> ListarPendentesAsync(Guid userId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
+    public Task<IReadOnlyList<AmizadeDaLista>> ListarAmigosAsync(Guid userId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task AdicionarAsync(Amizade amizade, CancellationToken cancellationToken)
     {
         Amizades.Add(amizade);

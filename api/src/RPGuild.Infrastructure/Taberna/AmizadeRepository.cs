@@ -24,6 +24,15 @@ public sealed class AmizadeRepository(AppDbContext db) : IAmizadeRepository
             select new PedidoPendente(a.Id, a.RequesterId == userId, new PessoaDaLista(u.Id, u.Nome, u.Nick, u.AvatarPath), a.CreatedAt))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<AmizadeDaLista>> ListarAmigosAsync(Guid userId, CancellationToken cancellationToken) =>
+        await (
+            from a in db.Amizades
+            where a.Status == StatusDaAmizade.Aceita && (a.RequesterId == userId || a.AddresseeId == userId)
+            join u in db.Users on (a.RequesterId == userId ? a.AddresseeId : a.RequesterId) equals u.Id
+            orderby a.RespondedAt descending
+            select new AmizadeDaLista(new PessoaDaLista(u.Id, u.Nome, u.Nick, u.AvatarPath), a.RespondedAt!.Value))
+            .ToListAsync(cancellationToken);
+
     public async Task AdicionarAsync(Amizade amizade, CancellationToken cancellationToken) =>
         await db.Amizades.AddAsync(amizade, cancellationToken);
 
