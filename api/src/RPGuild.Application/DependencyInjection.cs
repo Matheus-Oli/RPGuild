@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using RPGuild.Application.Campanhas;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Taberna;
@@ -15,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IPerfilService, PerfilService>();
         services.AddScoped<UploadService>();
         services.AddScoped<AmizadeService>();
+        services.AddScoped<SistemasService>();
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<EnvioDeEmail>();
         services.AddScoped<INotificador, Notificador>();

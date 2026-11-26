@@ -7,11 +7,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using RPGuild.Application.Campanhas;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Taberna;
 using RPGuild.Application.Uploads;
+using RPGuild.Infrastructure.Campanhas;
 using RPGuild.Infrastructure.Comum;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
@@ -82,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAmizadeRepository, AmizadeRepository>();
         services.AddScoped<INotificacaoRepository, NotificacaoRepository>();
+        services.AddScoped<ISistemasRepository, SistemasRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);
