@@ -21,4 +21,11 @@ public sealed class AuthService(IIdentityService identity, ITokenService tokens,
         var refresh = await refreshTokens.EmitirAsync(usuario.Id, cancellationToken);
         return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
     }
+
+    public async Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        // Token válido de um usuário que não existe mais: trata como sessão inválida.
+        var perfil = await identity.BuscarPerfilAsync(userId, cancellationToken);
+        return perfil is null ? ErrosDeConta.SessaoInvalida : perfil;
+    }
 }

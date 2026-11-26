@@ -12,4 +12,6 @@ public interface IIdentityService
         string nome, Nick nick, string email, string senha, CancellationToken cancellationToken);
 
     Task<Resultado<UsuarioResponse>> VerificarCredenciaisAsync(string email, string senha, CancellationToken cancellationToken);
+
+    Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken);
 }

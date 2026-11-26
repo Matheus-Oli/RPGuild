@@ -81,4 +81,10 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
 
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
     }
+
+    public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
+        userManager.Users
+            .Where(u => u.Id == userId)
+            .Select(u => new PerfilResponse(u.Id, u.Nome, u.Nick, u.Email!, u.AvatarPath))
+            .SingleOrDefaultAsync(cancellationToken);
 }

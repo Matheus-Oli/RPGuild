@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using RPGuild.Application.Contas;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
@@ -51,8 +54,24 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
-        services.AddSingleton(JwtOptions.Ler(configuration));
+        var jwt = JwtOptions.Ler(configuration);
+        services.AddSingleton(jwt);
         services.AddSingleton<ITokenService, JwtTokenService>();
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                // Mantém os nomes do JWT (sub, email, nick, name) em vez dos URIs do .NET.
+                options.MapInboundClaims = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidIssuer = jwt.Issuer,
+                    ValidAudience = jwt.Audience,
+                    IssuerSigningKey = JwtTokenService.ChaveDeAssinatura(jwt),
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    NameClaimType = JwtRegisteredClaimNames.Name,
+                };
+            });
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>(DatabaseHealthCheck);
