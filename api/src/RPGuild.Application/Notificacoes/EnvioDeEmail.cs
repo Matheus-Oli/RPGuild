@@ -16,8 +16,9 @@ public sealed class EnvioDeEmail(IEmailSender emails, ILogger<EnvioDeEmail> logg
         }
         catch (Exception ex)
         {
-            // Só o assunto e o destinatário: o corpo pode ter token.
-            logger.LogError(ex, "Falha ao enviar o e-mail \"{Assunto}\" para {Para}", mensagem.Assunto, mensagem.Para);
+            // Só o assunto e o destinatário mascarado: o corpo pode ter token.
+            logger.LogError(
+                ex, "Falha ao enviar o e-mail \"{Assunto}\" para {Para}", mensagem.Assunto, MascaraDeEmail.Mascarar(mensagem.Para));
         }
     }
 }
