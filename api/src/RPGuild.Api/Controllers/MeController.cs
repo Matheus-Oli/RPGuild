@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
 using RPGuild.Api.Http;
@@ -6,6 +7,7 @@ using RPGuild.Application.Contas;
 namespace RPGuild.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/me")]
 public sealed class MeController(IAuthService auth) : ControllerBase
 {
