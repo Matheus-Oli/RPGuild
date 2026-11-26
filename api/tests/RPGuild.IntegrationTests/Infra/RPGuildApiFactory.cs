@@ -101,11 +101,19 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
     public async Task<(NovoUsuario Usuario, string Token)> PedirRedefinicaoAsync(NovoUsuario? dados = null)
     {
         var (usuario, _) = await RegistrarUsuarioAsync(dados);
+        return (usuario, await PedirRedefinicaoAsync(usuario.Email));
+    }
+
+    /// <summary>
+    /// Pede a redefinição de senha de uma conta que já existe e devolve o token opaco que veio no e-mail.
+    /// </summary>
+    public async Task<string> PedirRedefinicaoAsync(string email)
+    {
         using var cliente = CriarCliente();
 
-        var pedido = await cliente.PostAsJsonAsync("/api/auth/forgot-password", new { usuario.Email });
+        var pedido = await cliente.PostAsJsonAsync("/api/auth/forgot-password", new { email });
         pedido.EnsureSuccessStatusCode();
 
-        return (usuario, LinkDeRedefinicao.Token(Emails.UltimaPara(usuario.Email)!));
+        return LinkDeRedefinicao.Token(Emails.UltimaPara(email)!);
     }
 }

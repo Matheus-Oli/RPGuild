@@ -48,6 +48,22 @@ public sealed class ResetPasswordTests(PostgresFixture postgres) : IDisposable
     }
 
     [Fact]
+    public async Task ResetPassword_TokenValido_DerrubaAsSessoesAbertas()
+    {
+        // Arrange
+        var logado = await _factory.CriarUsuarioELogarAsync();
+        var token = await _factory.PedirRedefinicaoAsync(logado.Dados.Email);
+        using var cliente = _factory.CriarCliente();
+        (await cliente.PostAsJsonAsync(Url, new { token, novaSenha = NovaSenha })).EnsureSuccessStatusCode();
+
+        // Act
+        var refresh = await cliente.SendAsync(RefreshCookie.Post("/api/auth/refresh", logado.RefreshCookie));
+
+        // Assert
+        refresh.DeveSerProblema(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task ResetPassword_TokenJaUsado_Retorna400()
     {
         // Arrange
