@@ -25,6 +25,9 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes)
         return new PaginaDeNotificacoesResponse([.. pagina.Select(Resposta)], proximo);
     }
 
+    public async Task<ContagemDeNaoLidasResponse> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
+        new(await notificacoes.ContarNaoLidasAsync(userId, cancellationToken));
+
     private static NotificacaoResponse Resposta(Notificacao notificacao)
     {
         using var dados = JsonDocument.Parse(notificacao.Dados);

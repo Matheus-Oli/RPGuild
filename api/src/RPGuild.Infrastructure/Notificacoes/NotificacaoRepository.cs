@@ -30,6 +30,9 @@ public sealed class NotificacaoRepository(AppDbContext db) : INotificacaoReposit
             .ToListAsync(cancellationToken);
     }
 
+    public Task<int> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.Notificacoes.CountAsync(n => n.UserId == userId && n.LidaEm == null, cancellationToken);
+
     public async Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken) =>
         await db.Notificacoes.AddAsync(notificacao, cancellationToken);
 

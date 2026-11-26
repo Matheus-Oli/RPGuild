@@ -17,6 +17,9 @@ public sealed class NotificacaoRepositoryFalso : INotificacaoRepository
         Guid userId, bool naoLidas, CursorDeNotificacoes? apos, int quantidade, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
+    public Task<int> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult(Notificacoes.Count(n => n.UserId == userId && !n.Lida));
+
     public Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken)
     {
         Notificacoes.Add(notificacao);
