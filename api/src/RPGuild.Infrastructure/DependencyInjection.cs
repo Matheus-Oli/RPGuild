@@ -2,6 +2,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using RPGuild.Application.Contas;
+using RPGuild.Infrastructure.Contas;
+using RPGuild.Infrastructure.Identity;
 using RPGuild.Infrastructure.Persistence;
 
 namespace RPGuild.Infrastructure;
@@ -26,6 +29,26 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
 
         services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));
+
+        services.AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                // UserName = e-mail; o formato já é validado no request.
+                options.User.AllowedUserNameCharacters = string.Empty;
+
+                options.Password.RequiredLength = RegrasDeConta.SenhaTamanhoMinimo;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.AllowedForNewUsers = true;
+            })
+            .AddEntityFrameworkStores<AppDbContext>();
+
+        services.AddScoped<IIdentityService, IdentityService>();
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>(DatabaseHealthCheck);
