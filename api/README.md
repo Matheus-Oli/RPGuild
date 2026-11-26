@@ -246,14 +246,14 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 3. Já são amigos dá 409, e já ter um pedido pendente meu para a pessoa também.
 4. Pedido pendente **dela para mim** dá 409 com "Essa pessoa já te enviou um pedido. Aceite na sua lista." Não há aceite automático. Se os dois pedirem ao mesmo tempo, o índice único do par barra o segundo (Postgres 23505 em `ix_friendships_par`) e ele recebe esse mesmo 409.
 5. Um pedido **recusado** pode ser reenviado na hora, por qualquer um dos dois. A linha recusada vira um pedido pendente novo, com o mesmo id, o novo sentido e o `created_at` do reenvio.
-6. O destinatário recebe o e-mail do aviso nº 5, com o nome e o @nick de quem pediu e o link `{Front:BaseUrl}/taberna`. Se o envio falhar, segue a regra de [E-mail](#e-mail): o 201 sai do mesmo jeito.
+6. O destinatário recebe o aviso nº 5 ([Notificações](#notificações)): `amizade_recebida` no sininho e o e-mail com o nome e o @nick de quem pediu e o link `{Front:BaseUrl}/taberna`. O e-mail vai pela fila, então o 201 não depende do envio.
 
 **Responder e desfazer**
 
 - Só o destinatário aceita ou recusa, e só quem enviou cancela. Para qualquer outra pessoa, o pedido "não existe" (404).
 - Só pedido pendente pode ser respondido ou cancelado (409).
 - Aceitar e recusar preenchem o `responded_at`. Cancelar apaga a linha.
-- Os avisos nº 6 e 7 (aceito e recusado) são só sininho e entram no módulo de Notificações.
+- Quem pediu recebe no sininho `amizade_aceita` (nº 6) ou `amizade_recusada` (nº 7), com o id, o nome e o nick de quem respondeu. Não há e-mail.
 - Remover amigo apaga a linha e quem foi removido não recebe nada (aviso nº 8 = N). Qualquer um dos dois pode remover, e depois os dois podem pedir de novo.
 
 **Listas**
@@ -265,6 +265,62 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 - O `avatarUrl` é a URL pública do avatar no storage (o mesmo `IStorageService.ObterUrlPublica` do perfil), ou null.
 
 Nos testes, `TabernaDeTeste` cria vários usuários logados (`CriarUsuariosLogadosAsync`, `CriarDoisUsuariosLogadosAsync`) e deixa dois amigos direto no banco (`TornarAmigosAsync`, com o "amigos desde" controlável). `ClienteDaTaberna` faz as chamadas e monta as URLs.
+
+## Notificações
+
+Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso, emailDestino?)`), decide os canais de cada tipo, grava o sininho e manda o e-mail. Contas e Taberna só chamam esse serviço; ninguém mais manda e-mail direto.
+
+- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)` e `AmizadeRecusada(...)`.
+- O `emailDestino` é para quando o e-mail não vai para o endereço atual do usuário: o antigo no nº 4 e o novo na confirmação.
+
+**Matriz** (`MatrizDeNotificacoes`, o único lugar com os canais):
+
+| Tipo | Nº | Sininho | E-mail | Para quem | `dados` |
+| --- | --- | --- | --- | --- | --- |
+| `boas_vindas` | 1 | sim | fila | o próprio usuário | `{}` |
+| `redefinicao_senha` | 2 | — | **direto** | o próprio usuário | — |
+| `senha_alterada` | 3 | — | fila | o próprio usuário | — |
+| `email_alterado` | 4 | — | fila | o e-mail **antigo** | — |
+| `confirmacao_email` | — | — | **direto** | o e-mail novo | — |
+| `amizade_recebida` | 5 | sim | fila | destinatário do pedido | `{pedidoId, deUserId, deNome, deNick}` |
+| `amizade_aceita` | 6 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
+| `amizade_recusada` | 7 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
+
+- O amigo removido (nº 8) não tem tipo: ninguém é avisado.
+- O front monta o texto: a API guarda e devolve só `tipo` e `dados`. Os `dados` levam os ids e os nomes **de quando a notificação foi criada** (não são atualizados se a pessoa mudar o nome ou o nick).
+- Tabela `notifications`: `id`, `user_id` (FK para `users`, cascade), `tipo`, `dados` (JSONB), `lida_em`, `created_at`. Índice `(user_id, created_at desc, id)`.
+
+**Endpoints** (todos com Bearer, 401 sem token; cada usuário só vê as dele, e a de outro usuário dá 404, sem revelar que existe):
+
+| Endpoint | Saída |
+| --- | --- |
+| `GET /api/notifications?naoLidas=&cursor=&limite=` | 200 `{itens: [{id, tipo, dados, lida, criadoEm}], proximoCursor}` · 400 cursor ou limite inválido |
+| `GET /api/notifications/unread-count` | 200 `{total}` |
+| `POST /api/notifications/{id}/read` | 204 (idempotente) · 404 |
+| `POST /api/notifications/read-all` | 204 |
+| `DELETE /api/notifications/{id}` | 204 · 404 |
+
+**Paginação** (`GET /api/notifications`)
+
+1. As mais novas primeiro: `created_at` decrescente, com desempate pelo `id`, na mesma ordem do índice.
+2. `limite`: padrão 20, máximo 50 (acima de 50 vira 50). Menor que 1 ou não numérico dá 400.
+3. O cursor é opaco: `Base64Url("{ticks do created_at}:{id}")` do último item da página (`CursorDeNotificacoes`). A próxima página vem com `?cursor=<proximoCursor>`.
+4. É paginação por chave (o que vem depois de `created_at`/`id`), então notificações novas chegando no topo não fazem a página seguinte repetir nem pular itens.
+5. `proximoCursor` vem null na última página. Cursor que não decodifica dá 400.
+6. `naoLidas=true` filtra na consulta (`lida_em` nulo).
+
+Nos testes, `NotificacoesDeTeste` grava notificações direto no banco, com o `created_at` controlável (`CriarNotificacaoAsync`), e lê as do usuário (`NotificacoesNoBancoAsync`).
+
+## Jobs (Hangfire)
+
+Hangfire (`Hangfire.AspNetCore` + `Hangfire.PostgreSql`) com storage no mesmo Postgres, no schema `hangfire`, que a própria lib cria. Não há migration do EF para essas tabelas, e o Respawn dos testes não mexe nesse schema. O Hangfire puxa o `Newtonsoft.Json` 11.0.1, que tem vulnerabilidade conhecida; o `RPGuild.Infrastructure` fixa a 13.0.4.
+
+- **Fila de e-mail** (`IFilaDeEmail`, implementada por `HangfireFilaDeEmail`): a requisição só enfileira e o job `EnvioDeEmailJob` envia. Se o envio falhar, a exceção sobe e o Hangfire tenta de novo (tentativas automáticas padrão). A mensagem inteira fica gravada no job.
+- **Exceções com token:** `redefinicao_senha` e `confirmacao_email` **não passam pela fila**, porque o token não pode ficar nas tabelas do Hangfire. Eles saem na hora pelo `EnvioDeEmail`; se falhar, loga mascarado e não quebra (veja [E-mail](#e-mail)).
+- **Limpeza:** o job recorrente diário `limpeza-de-notificacoes` (`LimpezaDeNotificacoes`) apaga as notificações com `created_at` de mais de **90 dias**, lidas ou não.
+- **Painel** em `/hangfire`, **só em Development** (e, pelo padrão do Hangfire, só para requisições locais). Em produção o painel não é mapeado.
+- **Liga/desliga:** o Hangfire sobe em todos os ambientes, menos no `Testing`. A chave `Hangfire:Habilitado` força um ou outro.
+- **Testes:** no `Testing`, a `RPGuildApiFactory` usa uma `FakeFilaDeEmail`, que "executa o job" na hora para o `FakeEmailSender` e engole a falha, como um job faria. Com `usarHangfire: true`, a factory sobe o Hangfire de verdade no container; os testes da fila (`FilaHangfireTests`) usam isso para conferir os jobs gravados.
 
 ## E-mail
 
@@ -291,8 +347,9 @@ Em dev, as credenciais ficam no `.env` da raiz do monorepo, que está no `.gitig
 **Comportamento**
 
 - Sem `Email:Host`, `Email:Port`, `Email:Usuario`, `Email:Senha` ou `Email:RemetenteEmail`, a API **não sobe**, e a mensagem diz quais chaves faltam. Isso também vale para os comandos `dotnet ef`, que sobem a API em Development: o `.env` precisa estar preenchido.
-- Se o envio falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (201 no register, 204 no forgot-password, e assim por diante). A falha vai para o log (`ILogger`) com o assunto e o destinatário mascarado (`ma***@gmail.com`; com 2 caracteres ou menos antes do `@`, `***@gmail.com`), sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`, o ponto único de envio dos casos de uso. Ainda não há reenvio; está anotado `TODO(hangfire)` para mover o envio para uma fila.
-- Nos testes, a `RPGuildApiFactory` troca o SMTP por um `FakeEmailSender`, que guarda as mensagens em memória (`factory.Emails.UltimaPara(email)`). O `SmtpEmailSender` não tem teste automatizado; ele é validado manualmente com o Gmail.
+- Os e-mails saem pelo [serviço central de notificações](#notificações): a maioria pela fila do [Hangfire](#jobs-hangfire), com novas tentativas, e os dois com token direto.
+- Se o envio direto falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (204 no forgot-password e no `PUT /api/me/email`). A falha vai para o log (`ILogger`) com o assunto e o destinatário mascarado (`ma***@gmail.com`; com 2 caracteres ou menos antes do `@`, `***@gmail.com`), sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`.
+- Nos testes, a `RPGuildApiFactory` troca o SMTP por um `FakeEmailSender`, que guarda as mensagens em memória (`factory.Emails.UltimaPara(email)`), e a fila por uma `FakeFilaDeEmail` (`factory.Fila`). O `SmtpEmailSender` não tem teste automatizado; ele é validado manualmente com o Gmail.
 
 ## Testes
 
