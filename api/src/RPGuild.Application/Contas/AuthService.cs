@@ -106,6 +106,8 @@ public sealed class AuthService(
             return ErrosDeConta.TokenDeRedefinicaoInvalido;
         }
 
+        // Quem pediu o reset pode estar tirando um invasor da conta: todas as sessões caem.
+        await refreshTokens.RevogarTodosDoUsuarioAsync(token.UserId, cancellationToken);
         return Vazio.Valor;
     }
 

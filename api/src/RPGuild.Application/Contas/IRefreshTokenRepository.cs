@@ -10,5 +10,7 @@ public interface IRefreshTokenRepository
 
     Task<IReadOnlyList<RefreshToken>> ListarDaFamiliaAsync(Guid familyId, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<RefreshToken>> ListarNaoRevogadosDoUsuarioAsync(Guid userId, CancellationToken cancellationToken);
+
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);
 }

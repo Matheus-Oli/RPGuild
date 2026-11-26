@@ -24,6 +24,9 @@ public sealed class RefreshTokenRepositoryFalso : IRefreshTokenRepository
     public Task<IReadOnlyList<RefreshToken>> ListarDaFamiliaAsync(Guid familyId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<RefreshToken>>([.. Tokens.Where(t => t.FamilyId == familyId)]);
 
+    public Task<IReadOnlyList<RefreshToken>> ListarNaoRevogadosDoUsuarioAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<RefreshToken>>([.. Tokens.Where(t => t.UserId == userId && !t.EstaRevogado)]);
+
     public Task SalvarAlteracoesAsync(CancellationToken cancellationToken)
     {
         VezesSalvo++;

@@ -64,6 +64,20 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Derruba todas as sessões do usuário (ex.: depois de redefinir a senha).
+    /// </summary>
+    public async Task RevogarTodosDoUsuarioAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var agora = relogio.GetUtcNow();
+        foreach (var token in await repositorio.ListarNaoRevogadosDoUsuarioAsync(userId, cancellationToken))
+        {
+            token.Revogar(agora);
+        }
+
+        await repositorio.SalvarAlteracoesAsync(cancellationToken);
+    }
+
     public static string CalcularHash(string token) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 

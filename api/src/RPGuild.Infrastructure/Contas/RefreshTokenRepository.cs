@@ -16,5 +16,8 @@ public sealed class RefreshTokenRepository(AppDbContext db) : IRefreshTokenRepos
     public async Task<IReadOnlyList<RefreshToken>> ListarDaFamiliaAsync(Guid familyId, CancellationToken cancellationToken) =>
         await db.RefreshTokens.Where(t => t.FamilyId == familyId).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<RefreshToken>> ListarNaoRevogadosDoUsuarioAsync(Guid userId, CancellationToken cancellationToken) =>
+        await db.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ToListAsync(cancellationToken);
+
     public Task SalvarAlteracoesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 }
