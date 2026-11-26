@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Npgsql;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Auth;
@@ -33,6 +34,21 @@ public sealed class ForgotPasswordTests(PostgresFixture postgres) : IDisposable
         link.ShouldStartWith($"{RPGuildApiFactory.FrontBaseUrl}/redefinir-senha?token=");
         link.ShouldNotContain(usuario.Email, Case.Insensitive);
         link.ShouldNotContain(Uri.EscapeDataString(usuario.Email), Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_EmailCadastrado_GuardaAsChavesDoDataProtectionNoBanco()
+    {
+        // Act
+        await _factory.PedirRedefinicaoAsync();
+
+        // Assert
+        await using var conexao = new NpgsqlConnection(postgres.ConnectionString);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand("SELECT count(*) FROM data_protection_keys", conexao);
+        var chaves = (long)(await comando.ExecuteScalarAsync())!;
+
+        chaves.ShouldBeGreaterThanOrEqualTo(1);
     }
 
     [Fact]
