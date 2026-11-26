@@ -7,20 +7,39 @@ namespace RPGuild.IntegrationTests.Infra;
 
 public sealed class PostgresFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
+    public const string NomeContainer = "rpguild-tests-db";
+
+    // Em dev o container sobrevive entre execuções (porta aleatória, sem brigar com o compose na 5432).
+    // Em CI (CI=true) ele é sempre novo e removido no fim.
+    private static readonly bool Reaproveitar = !string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase);
+
+    private readonly PostgreSqlContainer _container = CriarContainer();
 
     public string ConnectionString => _container.GetConnectionString();
+
+    private static PostgreSqlContainer CriarContainer()
+    {
+        var builder = new PostgreSqlBuilder("postgres:17-alpine");
+
+        if (Reaproveitar)
+        {
+            builder = builder.WithName(NomeContainer).WithReuse(true);
+        }
+
+        return builder.Build();
+    }
 
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
 
-        // Aplica o schema uma vez por execução; os testes já encontram as tabelas prontas.
+        // MigrateAsync só aplica as migrations pendentes; num container reaproveitado normalmente não há nenhuma.
         await using var context = CriarDbContext();
         await context.Database.MigrateAsync();
     }
 
-    public Task DisposeAsync() => _container.DisposeAsync().AsTask();
+    // O Dispose de um container reaproveitado o para; deixamos rodando para a próxima execução.
+    public Task DisposeAsync() => Reaproveitar ? Task.CompletedTask : _container.DisposeAsync().AsTask();
 
     /// <summary>
     /// Cria um <see cref="AppDbContext"/> com a mesma configuração da API, no banco padrão do container ou no informado.
