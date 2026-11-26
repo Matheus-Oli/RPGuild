@@ -14,7 +14,7 @@ O RPGuild é um site fechado para o grupo de RPG de mesa do Matheus que junta nu
 
 - **Custo:** zero. Toda a infraestrutura roda em planos gratuitos.
 
-- **Projeto anterior:** recomeço do RPGuild (antes React + Supabase), refeito do zero com Angular + .NET.
+- **Projeto anterior:** recomeço do RPGuild (antes React + Supabase), refeito do zero com React + .NET.
 
 ## Escopo e sistemas
 
@@ -342,7 +342,7 @@ O front fala com a API por REST e WebSocket (SignalR). As imagens sobem direto d
 
 | Camada       | Escolha                                                                                                |
 |--------------|--------------------------------------------------------------------------------------------------------|
-| Front        | Angular (standalone + signals), TipTap, dice-box, FullCalendar; motor de regras D&D em TypeScript      |
+| Front        | React + Vite + TypeScript, Tailwind + shadcn/ui, React Bits, TipTap, dice-box, FullCalendar; motor de regras D&D em TypeScript |
 | Back         | ASP.NET Core Web API (.NET 10), monólito modular em camadas (Api, Application, Domain, Infrastructure) |
 | Banco        | PostgreSQL + EF Core                                                                                   |
 | Autenticação | ASP.NET Identity, JWT curto + refresh token em cookie HttpOnly                                         |
@@ -494,7 +494,7 @@ O backlog está no Trello, no quadro [RPGuild](https://trello.com/b/qBRH7HXp/rpg
 
 | Sprint                      | Entrega                                                                                    |
 |-----------------------------|--------------------------------------------------------------------------------------------|
-| S0 · Setup e infra          | Monorepo, solution .NET, Angular, CI, VM Oracle, DuckDNS + Caddy, deploy da API e do front |
+| S0 · Setup e infra          | Monorepo, solution .NET, React, CI, VM Oracle, DuckDNS + Caddy, deploy da API e do front |
 | S1 · Contas e perfil        | Identity + JWT, e-mail SMTP, recuperação de senha, upload, perfil, home, empty states      |
 | S2 · Taberna e notificações | Amizades, serviço de notificações, NotificationHub e sininho                               |
 | S3 · Campanhas              | CRUD, convites, card do convite, página da campanha, configurações, CampaignHub            |
