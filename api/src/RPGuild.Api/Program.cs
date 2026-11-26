@@ -1,8 +1,10 @@
+using Hangfire;
 using Microsoft.OpenApi;
 using RPGuild.Api.Configuracao;
 using RPGuild.Api.Http;
 using RPGuild.Application;
 using RPGuild.Infrastructure;
+using RPGuild.Infrastructure.Notificacoes;
 
 const string FrontCorsPolicy = "Front";
 
@@ -23,6 +25,13 @@ builder.Services.AddControllers(options =>
 builder.Services.AddProblemDetails();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Fila de e-mail e jobs. Desligado no ambiente Testing (os testes usam uma fila falsa), salvo "Hangfire:Habilitado".
+var hangfireHabilitado = FilaHangfire.EstaHabilitado(builder.Configuration, builder.Environment.IsEnvironment("Testing"));
+if (hangfireHabilitado)
+{
+    builder.Services.AddFilaHangfire(builder.Configuration);
+}
 
 builder.Services.AddCors(options => options.AddPolicy(FrontCorsPolicy, policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
@@ -66,6 +75,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+// Painel do Hangfire só em Development (e, pelo padrão do Hangfire, só para requisições locais).
+if (hangfireHabilitado && app.Environment.IsDevelopment())
+{
+    app.MapHangfireDashboard("/hangfire");
+}
 
 app.Run();
 

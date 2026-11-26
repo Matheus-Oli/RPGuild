@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<AmizadeService>();
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<EnvioDeEmail>();
+        services.AddScoped<INotificador, Notificador>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

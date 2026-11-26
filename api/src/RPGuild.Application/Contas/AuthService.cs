@@ -9,6 +9,7 @@ public sealed class AuthService(
     ITokenService tokens,
     RefreshTokenService refreshTokens,
     EnvioDeEmail emails,
+    INotificador notificador,
     FrontOptions front) : IAuthService
 {
     public async Task<Resultado<UsuarioResponse>> RegistrarAsync(RegistrarRequest request, CancellationToken cancellationToken)
@@ -18,8 +19,7 @@ public sealed class AuthService(
 
         if (criado.Sucesso)
         {
-            var usuario = criado.Valor!;
-            await emails.EnviarAsync(EmailTemplates.BoasVindas(usuario.Nome, usuario.Email), cancellationToken);
+            await notificador.NotificarAsync(criado.Valor!.Id, new BoasVindas(), cancellationToken);
         }
 
         return criado;

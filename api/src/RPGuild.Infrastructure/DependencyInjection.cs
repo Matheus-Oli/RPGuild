@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAmizadeRepository, AmizadeRepository>();
+        services.AddScoped<INotificacaoRepository, NotificacaoRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);
