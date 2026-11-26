@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using RPGuild.Application.Contas;
 using RPGuild.IntegrationTests.Infra;
 
@@ -61,6 +64,32 @@ public sealed class ResetPasswordTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         refresh.DeveSerProblema(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public void Configuracao_TokenDeRedefinicao_ValeUmaHora()
+    {
+        // Act
+        var options = _factory.Services.GetRequiredService<IOptions<DataProtectionTokenProviderOptions>>().Value;
+
+        // Assert
+        options.TokenLifespan.ShouldBe(TimeSpan.FromHours(1));
+    }
+
+    [Fact]
+    public async Task ResetPassword_TokenExpirado_Retorna400()
+    {
+        // Arrange: o provider de token do Identity usa o relógio real, então a validade é encurtada em vez de avançar o relógio.
+        await using var factory = new RPGuildApiFactory(postgres, validadeDoTokenDeRedefinicao: TimeSpan.FromSeconds(1));
+        var (_, token) = await factory.PedirRedefinicaoAsync();
+        await Task.Delay(TimeSpan.FromSeconds(1.5));
+        using var cliente = factory.CriarCliente();
+
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Url, new { token, novaSenha = NovaSenha });
+
+        // Assert
+        resposta.DeveSerProblema(HttpStatusCode.BadRequest);
     }
 
     [Fact]

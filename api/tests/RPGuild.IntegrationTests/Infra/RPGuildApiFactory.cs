@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,15 +11,26 @@ using RPGuild.Application.Notificacoes;
 namespace RPGuild.IntegrationTests.Infra;
 
 /// <param name="emailSender">Troca o <see cref="FakeEmailSender"/> (ex.: um sender que falha).</param>
-public sealed class RPGuildApiFactory(string connectionString, TimeProvider? relogio = null, IEmailSender? emailSender = null)
+/// <param name="validadeDoTokenDeRedefinicao">
+/// Troca a validade do token de redefinição. O provider de token do Identity usa o relógio real, não o <see cref="TimeProvider"/>.
+/// </param>
+public sealed class RPGuildApiFactory(
+    string connectionString,
+    TimeProvider? relogio = null,
+    IEmailSender? emailSender = null,
+    TimeSpan? validadeDoTokenDeRedefinicao = null)
     : WebApplicationFactory<Program>
 {
     public const string FrontBaseUrl = "http://localhost:5173";
 
     public const string JwtKey = "testes-rpguild-chave-hs256-com-pelo-menos-32-bytes-0123456789";
 
-    public RPGuildApiFactory(PostgresFixture postgres, TimeProvider? relogio = null, IEmailSender? emailSender = null)
-        : this(postgres.ConnectionString, relogio, emailSender)
+    public RPGuildApiFactory(
+        PostgresFixture postgres,
+        TimeProvider? relogio = null,
+        IEmailSender? emailSender = null,
+        TimeSpan? validadeDoTokenDeRedefinicao = null)
+        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao)
     {
     }
 
@@ -44,6 +56,11 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
             if (relogio is not null)
             {
                 services.Replace(ServiceDescriptor.Singleton(relogio));
+            }
+
+            if (validadeDoTokenDeRedefinicao is { } validade)
+            {
+                services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = validade);
             }
         });
     }
