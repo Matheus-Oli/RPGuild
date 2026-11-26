@@ -392,14 +392,16 @@ POST /uploads/sign {tipo, contentType} → {uploadUrl, path, publicUrl}
 **Taberna**
 
 ```
-GET /friends
-GET /friends/requests (recebidas + enviadas)
+GET /friends → [{userId, nome, nick, avatarUrl, campanhasEmComum, amigosDesde}]
+GET /friends/requests (recebidas + enviadas) → {recebidos: [{id, de: {userId, nome, nick, avatarUrl}, criadoEm}], enviados: [{id, para: {userId, nome, nick, avatarUrl}, criadoEm}]}
 POST /friends/requests {emailOuNick}
 POST /friends/requests/{id}/accept
 POST /friends/requests/{id}/decline
 DELETE /friends/requests/{id} (cancelar enviada)
 DELETE /friends/{userId}
 ```
+
+As listas de amigos e de pedidos não são paginadas.
 
 **Campanhas e convites**
 

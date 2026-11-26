@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RPGuild.Domain.Contas;
+using RPGuild.Domain.Taberna;
 using RPGuild.Infrastructure.Identity;
 
 namespace RPGuild.Infrastructure.Persistence;
@@ -9,6 +10,8 @@ namespace RPGuild.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUserContext<ApplicationUser, Guid>(options), IDataProtectionKeyContext
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<Amizade> Amizades => Set<Amizade>();
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

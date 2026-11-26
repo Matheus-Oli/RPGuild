@@ -16,6 +16,16 @@ public interface IIdentityService
     Task<DadosDoPerfil?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Usuário com este e-mail (sem diferenciar caixa), ou null.
+    /// </summary>
+    Task<DadosDoPerfil?> BuscarPorEmailAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Usuário com este nick já normalizado (<see cref="Nick.Normalizar"/>), ou null.
+    /// </summary>
+    Task<DadosDoPerfil?> BuscarPorNickAsync(string nickNormalizado, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Troca o e-mail (e o UserName) pelo pendente se o token for válido para ele, e limpa o pendente.
     /// Erros: token inválido, expirado ou já usado; e-mail tomado por outra conta depois do pedido.
     /// </summary>

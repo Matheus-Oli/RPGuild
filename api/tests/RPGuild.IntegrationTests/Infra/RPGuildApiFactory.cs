@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
+using RPGuild.Infrastructure.Comum;
 
 namespace RPGuild.IntegrationTests.Infra;
 
@@ -15,23 +16,31 @@ namespace RPGuild.IntegrationTests.Infra;
 /// <param name="validadeDoTokenDeRedefinicao">
 /// Troca a validade do token de redefinição. O provider de token do Identity usa o relógio real, não o <see cref="TimeProvider"/>.
 /// </param>
+/// <param name="configurarServicos">Ajuste extra nos serviços da API (ex.: um interceptor do EF que simula erro do banco).</param>
 public sealed class RPGuildApiFactory(
     string connectionString,
     TimeProvider? relogio = null,
     IEmailSender? emailSender = null,
-    TimeSpan? validadeDoTokenDeRedefinicao = null)
+    TimeSpan? validadeDoTokenDeRedefinicao = null,
+    Action<IServiceCollection>? configurarServicos = null)
     : WebApplicationFactory<Program>
 {
     public const string FrontBaseUrl = "http://localhost:5173";
 
     public const string JwtKey = "testes-rpguild-chave-hs256-com-pelo-menos-32-bytes-0123456789";
 
+    /// <summary>
+    /// Banco desta factory, para os helpers que preparam dados direto no Postgres.
+    /// </summary>
+    public string ConnectionString => connectionString;
+
     public RPGuildApiFactory(
         PostgresFixture postgres,
         TimeProvider? relogio = null,
         IEmailSender? emailSender = null,
-        TimeSpan? validadeDoTokenDeRedefinicao = null)
-        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao)
+        TimeSpan? validadeDoTokenDeRedefinicao = null,
+        Action<IServiceCollection>? configurarServicos = null)
+        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao, configurarServicos)
     {
     }
 
@@ -63,13 +72,16 @@ public sealed class RPGuildApiFactory(
 
             if (relogio is not null)
             {
-                services.Replace(ServiceDescriptor.Singleton(relogio));
+                // Mesma precisão do relógio da API.
+                services.Replace(ServiceDescriptor.Singleton<TimeProvider>(new RelogioEmMicrossegundos(relogio)));
             }
 
             if (validadeDoTokenDeRedefinicao is { } validade)
             {
                 services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = validade);
             }
+
+            configurarServicos?.Invoke(services);
         });
     }
 

@@ -10,11 +10,14 @@ using Microsoft.IdentityModel.Tokens;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
+using RPGuild.Application.Taberna;
 using RPGuild.Application.Uploads;
+using RPGuild.Infrastructure.Comum;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
 using RPGuild.Infrastructure.Notificacoes;
 using RPGuild.Infrastructure.Persistence;
+using RPGuild.Infrastructure.Taberna;
 using RPGuild.Infrastructure.Uploads;
 
 namespace RPGuild.Infrastructure;
@@ -36,7 +39,8 @@ public static class DependencyInjection
                 "Em desenvolvimento ela fica no appsettings.Development.json; em produção, na variável de ambiente ConnectionStrings__Default.");
         }
 
-        services.TryAddSingleton(TimeProvider.System);
+        // Agora na precisão do Postgres: o instante devolvido por quem grava é o mesmo que uma leitura devolve depois.
+        services.TryAddSingleton<TimeProvider>(new RelogioEmMicrossegundos(TimeProvider.System));
 
         services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));
 
@@ -69,6 +73,7 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IAmizadeRepository, AmizadeRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);
