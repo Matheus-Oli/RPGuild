@@ -11,6 +11,18 @@ namespace RPGuild.Api.TempoReal;
 public sealed class NotificationHub : Hub
 {
     public const string Rota = "/hubs/notifications";
+
+    /// <summary>
+    /// Nomes dos eventos que o front escuta (os mesmos do documento do projeto).
+    /// </summary>
+    public static class Eventos
+    {
+        public const string NotificationCreated = nameof(NotificationCreated);
+        public const string UnreadCount = nameof(UnreadCount);
+        public const string NotificationRead = nameof(NotificationRead);
+        public const string NotificationsReadAll = nameof(NotificationsReadAll);
+        public const string NotificationDeleted = nameof(NotificationDeleted);
+    }
 }
 
 /// <summary>
