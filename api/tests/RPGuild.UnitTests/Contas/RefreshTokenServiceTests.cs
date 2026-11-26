@@ -79,4 +79,30 @@ public class RefreshTokenServiceTests
         resultado.Erro!.Tipo.ShouldBe(TipoErro.NaoAutorizado);
         _repositorio.Tokens.ShouldHaveSingleItem();
     }
+
+    [Fact]
+    public async Task RotacionarAsync_TokenRevogadoReutilizado_RevogaAFamiliaInteira()
+    {
+        // Arrange
+        var original = await _service.EmitirAsync(_userId, CancellationToken.None);
+        var rotacionado = (await _service.RotacionarAsync(original.Token, CancellationToken.None)).Valor!;
+        var outraSessao = await _service.EmitirAsync(_userId, CancellationToken.None);
+        _relogio.Advance(TimeSpan.FromMinutes(5));
+
+        // Act
+        var resultado = await _service.RotacionarAsync(original.Token, CancellationToken.None);
+
+        // Assert
+        resultado.Sucesso.ShouldBeFalse();
+        resultado.Erro!.Tipo.ShouldBe(TipoErro.NaoAutorizado);
+
+        var familia = _repositorio.Tokens.Where(t => t.FamilyId == Buscar(original.Token).FamilyId).ToList();
+        familia.Count.ShouldBe(2);
+        familia.ShouldAllBe(t => t.RevokedAt != null);
+        Buscar(rotacionado.Token).RevokedAt.ShouldBe(_relogio.GetUtcNow());
+        Buscar(outraSessao.Token).RevokedAt.ShouldBeNull();
+    }
+
+    private Domain.Contas.RefreshToken Buscar(string token) =>
+        _repositorio.Tokens.Single(t => t.TokenHash == RefreshTokenService.CalcularHash(token));
 }
