@@ -37,7 +37,7 @@ public sealed class ListarAmigosTests(PostgresFixture postgres) : IDisposable
     public async Task ListarAmigos_AmigoComAvatar_TrazAUrlPublica()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(a, b);
         var avatar = b.NovoAvatar();
         using (var clienteDeB = _factory.CriarClienteAutenticado(b.AccessToken))
@@ -56,7 +56,7 @@ public sealed class ListarAmigosTests(PostgresFixture postgres) : IDisposable
     public async Task ListarAmigos_Resposta_NaoTemEmailDeNinguem()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(a, b);
         using var cliente = _factory.CriarClienteAutenticado(a.AccessToken);
 
@@ -79,11 +79,5 @@ public sealed class ListarAmigosTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }

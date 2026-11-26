@@ -14,11 +14,11 @@ public sealed class CancelarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Cancelar_QuemEnviouPedidoPendente_Retorna204ESomeDosDoisLados()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var resposta = await _factory.DeleteAsync(a, Url(pedido.Id));
+        var resposta = await _factory.DeleteAsync(a, ClienteDaTaberna.Pedido(pedido.Id));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -30,11 +30,11 @@ public sealed class CancelarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Cancelar_DestinatarioTentaCancelar_Retorna404()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var resposta = await _factory.DeleteAsync(b, Url(pedido.Id));
+        var resposta = await _factory.DeleteAsync(b, ClienteDaTaberna.Pedido(pedido.Id));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.NotFound);
@@ -45,12 +45,12 @@ public sealed class CancelarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Cancelar_PedidoJaRespondido_Retorna409()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
-        (await _factory.PostAsync(b, $"{ClienteDaTaberna.Pedidos}/{pedido.Id}/decline")).EnsureSuccessStatusCode();
+        (await _factory.PostAsync(b, ClienteDaTaberna.Recusar(pedido.Id))).EnsureSuccessStatusCode();
 
         // Act
-        var resposta = await _factory.DeleteAsync(a, Url(pedido.Id));
+        var resposta = await _factory.DeleteAsync(a, ClienteDaTaberna.Pedido(pedido.Id));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.Conflict);
@@ -63,17 +63,9 @@ public sealed class CancelarPedidoTests(PostgresFixture postgres) : IDisposable
         using var cliente = _factory.CriarCliente();
 
         // Act
-        var resposta = await cliente.DeleteAsync(Url(Guid.NewGuid()));
+        var resposta = await cliente.DeleteAsync(ClienteDaTaberna.Pedido(Guid.NewGuid()));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private static string Url(Guid pedidoId) => $"{ClienteDaTaberna.Pedidos}/{pedidoId}";
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }

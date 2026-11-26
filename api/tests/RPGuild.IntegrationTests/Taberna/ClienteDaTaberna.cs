@@ -11,6 +11,14 @@ public static class ClienteDaTaberna
     public const string Pedidos = "/api/friends/requests";
     public const string Amigos = "/api/friends";
 
+    public static string Pedido(Guid pedidoId) => $"{Pedidos}/{pedidoId}";
+
+    public static string Aceitar(Guid pedidoId) => $"{Pedido(pedidoId)}/accept";
+
+    public static string Recusar(Guid pedidoId) => $"{Pedido(pedidoId)}/decline";
+
+    public static string Amigo(Guid userId) => $"{Amigos}/{userId}";
+
     public static async Task<HttpResponseMessage> PedirAsync(this RPGuildApiFactory factory, UsuarioLogado de, string emailOuNick)
     {
         using var cliente = factory.CriarClienteAutenticado(de.AccessToken);

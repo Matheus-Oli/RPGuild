@@ -24,7 +24,7 @@ public sealed class ListarPedidosTests(PostgresFixture postgres) : IDisposable
 
         // Fora da lista: um pedido recusado e uma amizade aceita.
         var deD = await _factory.PedirComSucessoAsync(d, a);
-        (await _factory.PostAsync(a, $"{ClienteDaTaberna.Pedidos}/{deD.Id}/decline")).EnsureSuccessStatusCode();
+        (await _factory.PostAsync(a, ClienteDaTaberna.Recusar(deD.Id))).EnsureSuccessStatusCode();
         await _factory.TornarAmigosAsync(a, e);
 
         // Act

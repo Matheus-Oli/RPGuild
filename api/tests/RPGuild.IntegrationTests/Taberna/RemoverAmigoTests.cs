@@ -14,12 +14,12 @@ public sealed class RemoverAmigoTests(PostgresFixture postgres) : IDisposable
     public async Task Remover_Amigo_Retorna204ESomeDaListaDosDoisSemAvisarORemovido()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(a, b);
         var emailsDeB = _factory.Emails.Enviadas.Count(m => m.Para == b.Dados.Email);
 
         // Act
-        var resposta = await _factory.DeleteAsync(a, Url(b.Id));
+        var resposta = await _factory.DeleteAsync(a, ClienteDaTaberna.Amigo(b.Id));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -32,11 +32,11 @@ public sealed class RemoverAmigoTests(PostgresFixture postgres) : IDisposable
     public async Task Remover_QuemFoiAdicionadoTambemPodeRemover_Retorna204()
     {
         // Arrange: o pedido foi de A; quem remove é B.
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(a, b);
 
         // Act
-        var resposta = await _factory.DeleteAsync(b, Url(a.Id));
+        var resposta = await _factory.DeleteAsync(b, ClienteDaTaberna.Amigo(a.Id));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -47,10 +47,10 @@ public sealed class RemoverAmigoTests(PostgresFixture postgres) : IDisposable
     public async Task Remover_NaoSaoAmigos_Retorna404()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
 
         // Act
-        var resposta = await _factory.DeleteAsync(a, Url(b.Id));
+        var resposta = await _factory.DeleteAsync(a, ClienteDaTaberna.Amigo(b.Id));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.NotFound);
@@ -60,11 +60,11 @@ public sealed class RemoverAmigoTests(PostgresFixture postgres) : IDisposable
     public async Task Remover_SoTemPedidoPendente_Retorna404EMantemOPedido()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var resposta = await _factory.DeleteAsync(a, Url(b.Id));
+        var resposta = await _factory.DeleteAsync(a, ClienteDaTaberna.Amigo(b.Id));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.NotFound);
@@ -75,9 +75,9 @@ public sealed class RemoverAmigoTests(PostgresFixture postgres) : IDisposable
     public async Task Remover_DepoisOsDoisPodemPedirDeNovo_Retorna201()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(a, b);
-        (await _factory.DeleteAsync(a, Url(b.Id))).EnsureSuccessStatusCode();
+        (await _factory.DeleteAsync(a, ClienteDaTaberna.Amigo(b.Id))).EnsureSuccessStatusCode();
 
         // Act
         var resposta = await _factory.PedirAsync(b, a.Dados.Nick);
@@ -93,17 +93,9 @@ public sealed class RemoverAmigoTests(PostgresFixture postgres) : IDisposable
         using var cliente = _factory.CriarCliente();
 
         // Act
-        var resposta = await cliente.DeleteAsync(Url(Guid.NewGuid()));
+        var resposta = await cliente.DeleteAsync(ClienteDaTaberna.Amigo(Guid.NewGuid()));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private static string Url(Guid userId) => $"{ClienteDaTaberna.Amigos}/{userId}";
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }

@@ -66,7 +66,7 @@ public sealed class ErrosDoEnvioTests(PostgresFixture postgres) : IDisposable
     public async Task Enviar_JaSaoAmigos_Retorna409()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(b, a);
 
         // Act
@@ -81,7 +81,7 @@ public sealed class ErrosDoEnvioTests(PostgresFixture postgres) : IDisposable
     public async Task Enviar_JaTemPedidoPendenteMeu_Retorna409()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.PedirComSucessoAsync(a, b);
 
         // Act
@@ -96,7 +96,7 @@ public sealed class ErrosDoEnvioTests(PostgresFixture postgres) : IDisposable
     public async Task Enviar_JaTemPedidoPendenteDele_Retorna409ComAMensagemSemAceitar()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.PedirComSucessoAsync(b, a);
 
         // Act
@@ -120,11 +120,5 @@ public sealed class ErrosDoEnvioTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }

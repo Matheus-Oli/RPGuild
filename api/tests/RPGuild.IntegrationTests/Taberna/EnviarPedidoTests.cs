@@ -21,7 +21,7 @@ public sealed class EnviarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Enviar_EmailOuNick_Retorna201EApareceNosDoisLados(string forma)
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var emailOuNick = forma switch
         {
             "email" => b.Dados.Email,
@@ -48,11 +48,5 @@ public sealed class EnviarPedidoTests(PostgresFixture postgres) : IDisposable
         var recebido = (await _factory.PedidosDeAsync(b)).Recebidos.ShouldHaveSingleItem();
         recebido.Id.ShouldBe(pedido.Id);
         recebido.De.ShouldBe(new PessoaResponse(a.Id, a.Dados.Nome, a.Dados.Nick, null));
-    }
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }

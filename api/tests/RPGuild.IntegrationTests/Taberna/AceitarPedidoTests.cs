@@ -14,11 +14,11 @@ public sealed class AceitarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Aceitar_DestinatarioDePedidoPendente_Retorna204EOsDoisViramAmigos()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var resposta = await _factory.PostAsync(b, Url(pedido.Id));
+        var resposta = await _factory.PostAsync(b, ClienteDaTaberna.Aceitar(pedido.Id));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -42,8 +42,8 @@ public sealed class AceitarPedidoTests(PostgresFixture postgres) : IDisposable
         var pedido = await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var peloRemetente = await _factory.PostAsync(a, Url(pedido.Id));
-        var porTerceiro = await _factory.PostAsync(terceiro, Url(pedido.Id));
+        var peloRemetente = await _factory.PostAsync(a, ClienteDaTaberna.Aceitar(pedido.Id));
+        var porTerceiro = await _factory.PostAsync(terceiro, ClienteDaTaberna.Aceitar(pedido.Id));
 
         // Assert
         peloRemetente.DeveSerProblema(HttpStatusCode.NotFound);
@@ -58,7 +58,7 @@ public sealed class AceitarPedidoTests(PostgresFixture postgres) : IDisposable
         var a = await _factory.CriarUsuarioELogarAsync();
 
         // Act
-        var resposta = await _factory.PostAsync(a, Url(Guid.NewGuid()));
+        var resposta = await _factory.PostAsync(a, ClienteDaTaberna.Aceitar(Guid.NewGuid()));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.NotFound);
@@ -68,12 +68,12 @@ public sealed class AceitarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Aceitar_PedidoJaRespondido_Retorna409()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
-        (await _factory.PostAsync(b, Url(pedido.Id))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await _factory.PostAsync(b, ClienteDaTaberna.Aceitar(pedido.Id))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         // Act
-        var resposta = await _factory.PostAsync(b, Url(pedido.Id));
+        var resposta = await _factory.PostAsync(b, ClienteDaTaberna.Aceitar(pedido.Id));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.Conflict);
@@ -86,17 +86,9 @@ public sealed class AceitarPedidoTests(PostgresFixture postgres) : IDisposable
         using var cliente = _factory.CriarCliente();
 
         // Act
-        var resposta = await cliente.PostAsync(Url(Guid.NewGuid()), content: null);
+        var resposta = await cliente.PostAsync(ClienteDaTaberna.Aceitar(Guid.NewGuid()), content: null);
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private static string Url(Guid pedidoId) => $"{ClienteDaTaberna.Pedidos}/{pedidoId}/accept";
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }

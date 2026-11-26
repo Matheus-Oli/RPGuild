@@ -18,6 +18,12 @@ public static class TabernaDeTeste
         return logados;
     }
 
+    public static async Task<(UsuarioLogado A, UsuarioLogado B)> CriarDoisUsuariosLogadosAsync(this RPGuildApiFactory factory)
+    {
+        var usuarios = await factory.CriarUsuariosLogadosAsync(2);
+        return (usuarios[0], usuarios[1]);
+    }
+
     /// <summary>
     /// Deixa os dois amigos direto no banco (pedido de <paramref name="a"/> aceito por <paramref name="b"/>),
     /// sem passar pelos endpoints. <paramref name="desde"/> é o "amigos desde" (responded_at do aceite).

@@ -14,11 +14,11 @@ public sealed class RecusarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Recusar_DestinatarioDePedidoPendente_Retorna204ESomeDasListasSemVirarAmizade()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var resposta = await _factory.PostAsync(b, Url(pedido.Id));
+        var resposta = await _factory.PostAsync(b, ClienteDaTaberna.Recusar(pedido.Id));
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -35,9 +35,9 @@ public sealed class RecusarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Recusar_DepoisQuemPediuReenvia_Retorna201ComPedidoPendenteNovo()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
-        (await _factory.PostAsync(b, Url(pedido.Id))).EnsureSuccessStatusCode();
+        (await _factory.PostAsync(b, ClienteDaTaberna.Recusar(pedido.Id))).EnsureSuccessStatusCode();
 
         // Act
         var resposta = await _factory.PedirAsync(a, b.Dados.Nick);
@@ -52,9 +52,9 @@ public sealed class RecusarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Recusar_DepoisQuemRecusouPede_Retorna201NoOutroSentido()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
-        (await _factory.PostAsync(b, Url(pedido.Id))).EnsureSuccessStatusCode();
+        (await _factory.PostAsync(b, ClienteDaTaberna.Recusar(pedido.Id))).EnsureSuccessStatusCode();
 
         // Act
         var resposta = await _factory.PedirAsync(b, a.Dados.Nick);
@@ -74,8 +74,8 @@ public sealed class RecusarPedidoTests(PostgresFixture postgres) : IDisposable
         var pedido = await _factory.PedirComSucessoAsync(a, b);
 
         // Act
-        var peloRemetente = await _factory.PostAsync(a, Url(pedido.Id));
-        var porTerceiro = await _factory.PostAsync(terceiro, Url(pedido.Id));
+        var peloRemetente = await _factory.PostAsync(a, ClienteDaTaberna.Recusar(pedido.Id));
+        var porTerceiro = await _factory.PostAsync(terceiro, ClienteDaTaberna.Recusar(pedido.Id));
 
         // Assert
         peloRemetente.DeveSerProblema(HttpStatusCode.NotFound);
@@ -87,12 +87,12 @@ public sealed class RecusarPedidoTests(PostgresFixture postgres) : IDisposable
     public async Task Recusar_PedidoJaRespondido_Retorna409()
     {
         // Arrange
-        var (a, b) = await DoisUsuariosAsync();
+        var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
-        (await _factory.PostAsync(b, $"{ClienteDaTaberna.Pedidos}/{pedido.Id}/accept")).EnsureSuccessStatusCode();
+        (await _factory.PostAsync(b, ClienteDaTaberna.Aceitar(pedido.Id))).EnsureSuccessStatusCode();
 
         // Act
-        var resposta = await _factory.PostAsync(b, Url(pedido.Id));
+        var resposta = await _factory.PostAsync(b, ClienteDaTaberna.Recusar(pedido.Id));
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.Conflict);
@@ -106,17 +106,9 @@ public sealed class RecusarPedidoTests(PostgresFixture postgres) : IDisposable
         using var cliente = _factory.CriarCliente();
 
         // Act
-        var resposta = await cliente.PostAsync(Url(Guid.NewGuid()), content: null);
+        var resposta = await cliente.PostAsync(ClienteDaTaberna.Recusar(Guid.NewGuid()), content: null);
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private static string Url(Guid pedidoId) => $"{ClienteDaTaberna.Pedidos}/{pedidoId}/decline";
-
-    private async Task<(UsuarioLogado A, UsuarioLogado B)> DoisUsuariosAsync()
-    {
-        var usuarios = await _factory.CriarUsuariosLogadosAsync(2);
-        return (usuarios[0], usuarios[1]);
     }
 }
