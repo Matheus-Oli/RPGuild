@@ -10,6 +10,7 @@ public sealed class AuthService(
     ITokenService tokens,
     RefreshTokenService refreshTokens,
     IEmailSender emails,
+    FrontOptions front,
     ILogger<AuthService> logger) : IAuthService
 {
     public async Task<Resultado<UsuarioResponse>> RegistrarAsync(RegistrarRequest request, CancellationToken cancellationToken)
@@ -71,6 +72,30 @@ public sealed class AuthService(
 
         var usuario = new UsuarioResponse(perfil.Id, perfil.Nome, perfil.Nick, perfil.Email);
         return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
+    }
+
+    public async Task<Resultado<Vazio>> EsqueciSenhaAsync(EsqueciSenhaRequest request, CancellationToken cancellationToken)
+    {
+        var dados = await identity.GerarTokenDeRedefinicaoAsync(request.Email.Trim(), cancellationToken);
+        if (dados is null)
+        {
+            return ErrosDeConta.EmailNaoCadastrado;
+        }
+
+        // Só o token opaco vai na URL; o e-mail não.
+        var link = $"{front.BaseUrl.TrimEnd('/')}/redefinir-senha?token={dados.Token.Codificar()}";
+        var mensagem = EmailTemplates.RedefinicaoDeSenha(dados.Nome, dados.Email, link);
+        try
+        {
+            // TODO(hangfire): mover envio para fila
+            await emails.EnviarAsync(mensagem, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Falha ao enviar o e-mail \"{Assunto}\" para {Para}", mensagem.Assunto, mensagem.Para);
+        }
+
+        return Vazio.Valor;
     }
 
     public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)

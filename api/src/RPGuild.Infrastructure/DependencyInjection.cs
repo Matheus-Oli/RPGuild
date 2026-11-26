@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Infrastructure.Contas;
@@ -57,7 +59,8 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 options.Lockout.AllowedForNewUsers = true;
             })
-            .AddEntityFrameworkStores<AppDbContext>();
+            .AddEntityFrameworkStores<AppDbContext>()
+            .AddDefaultTokenProviders();
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
@@ -66,6 +69,7 @@ public static class DependencyInjection
         services.AddSingleton(jwt);
         services.AddSingleton<ITokenService, JwtTokenService>();
 
+        services.AddSingleton(LerFrontOptions(configuration));
         services.AddSingleton(EmailOptions.Ler(configuration));
         services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
@@ -98,5 +102,18 @@ public static class DependencyInjection
         });
 
         return services;
+    }
+
+    private static FrontOptions LerFrontOptions(IConfiguration configuration)
+    {
+        var options = configuration.GetSection(FrontOptions.Secao).Get<FrontOptions>() ?? new FrontOptions();
+        if (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _))
+        {
+            throw new InvalidOperationException(
+                "'Front:BaseUrl' precisa ser uma URL absoluta (ex.: http://localhost:5173). " +
+                "Em desenvolvimento ela fica no appsettings.Development.json; em produção, na variável de ambiente Front__BaseUrl.");
+        }
+
+        return options;
     }
 }

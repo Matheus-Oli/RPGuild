@@ -6,12 +6,25 @@ public enum TipoErro
     NaoAutorizado,
     Conflito,
     Bloqueado,
+    NaoEncontrado,
 }
 
 /// <summary>
 /// Falha esperada de um caso de uso. A Api traduz o <see cref="Tipo"/> para o status HTTP.
 /// </summary>
 public sealed record Erro(TipoErro Tipo, string Titulo, string Detalhe);
+
+/// <summary>
+/// Valor de sucesso de um caso de uso que não devolve nada.
+/// </summary>
+public sealed record Vazio
+{
+    public static readonly Vazio Valor = new();
+
+    private Vazio()
+    {
+    }
+}
 
 public sealed class Resultado<T>
 {

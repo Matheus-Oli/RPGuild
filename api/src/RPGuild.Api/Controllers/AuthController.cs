@@ -33,6 +33,15 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
         return this.ParaResposta(resultado, Sessao);
     }
 
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ForgotPassword(EsqueciSenhaRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await auth.EsqueciSenhaAsync(request, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
+
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)

@@ -16,6 +16,9 @@ public static class ErrosDeConta
     public static readonly Erro ContaBloqueada = new(
         TipoErro.Bloqueado, "Conta bloqueada", "Muitas tentativas de login. Tente de novo em 15 minutos.");
 
+    public static readonly Erro EmailNaoCadastrado = new(
+        TipoErro.NaoEncontrado, "E-mail não cadastrado", "Não existe conta com este e-mail.");
+
     public static readonly Erro SessaoInvalida = new(
         TipoErro.NaoAutorizado, "Sessão inválida", "Sua sessão expirou ou não é válida. Entre novamente.");
 }

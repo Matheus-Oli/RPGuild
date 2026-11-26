@@ -82,6 +82,18 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
     }
 
+    public async Task<DadosDeRedefinicao?> GerarTokenDeRedefinicaoAsync(string email, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByEmailAsync(email);
+        if (usuario is null)
+        {
+            return null;
+        }
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(usuario);
+        return new DadosDeRedefinicao(usuario.Nome, usuario.Email!, new TokenDeRedefinicao(usuario.Id, token));
+    }
+
     public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)

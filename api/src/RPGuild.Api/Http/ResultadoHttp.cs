@@ -20,6 +20,7 @@ public static class ResultadoHttp
         TipoErro.NaoAutorizado => StatusCodes.Status401Unauthorized,
         TipoErro.Conflito => StatusCodes.Status409Conflict,
         TipoErro.Bloqueado => StatusCodes.Status423Locked,
+        TipoErro.NaoEncontrado => StatusCodes.Status404NotFound,
         _ => StatusCodes.Status500InternalServerError,
     };
 }
