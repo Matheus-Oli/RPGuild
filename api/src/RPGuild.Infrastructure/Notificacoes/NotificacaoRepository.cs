@@ -41,6 +41,8 @@ public sealed class NotificacaoRepository(AppDbContext db) : INotificacaoReposit
             .Where(n => n.UserId == userId && n.LidaEm == null)
             .ExecuteUpdateAsync(set => set.SetProperty(n => n.LidaEm, agora), cancellationToken);
 
+    public void Remover(Notificacao notificacao) => db.Notificacoes.Remove(notificacao);
+
     public async Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken) =>
         await db.Notificacoes.AddAsync(notificacao, cancellationToken);
 

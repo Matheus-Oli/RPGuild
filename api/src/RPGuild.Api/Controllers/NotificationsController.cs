@@ -30,6 +30,15 @@ public sealed class NotificationsController(NotificacoesService notificacoes) : 
         return this.ParaResposta(resultado, _ => NoContent());
     }
 
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Apagar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await notificacoes.ApagarAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
+
     [HttpPost("read-all")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> LerTodas(CancellationToken cancellationToken)

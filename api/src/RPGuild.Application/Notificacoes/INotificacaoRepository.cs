@@ -19,6 +19,8 @@ public interface INotificacaoRepository
 
     Task MarcarTodasComoLidasAsync(Guid userId, DateTimeOffset agora, CancellationToken cancellationToken);
 
+    void Remover(Notificacao notificacao);
+
     Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken);
 
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);

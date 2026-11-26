@@ -45,6 +45,19 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Tim
         return Vazio.Valor;
     }
 
+    public async Task<Resultado<Vazio>> ApagarAsync(Guid userId, Guid id, CancellationToken cancellationToken)
+    {
+        var notificacao = await notificacoes.BuscarDoUsuarioAsync(id, userId, cancellationToken);
+        if (notificacao is null)
+        {
+            return ErrosDeNotificacoes.NotificacaoNaoEncontrada;
+        }
+
+        notificacoes.Remover(notificacao);
+        await notificacoes.SalvarAlteracoesAsync(cancellationToken);
+        return Vazio.Valor;
+    }
+
     public Task MarcarTodasComoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
         notificacoes.MarcarTodasComoLidasAsync(userId, relogio.GetUtcNow(), cancellationToken);
 

@@ -33,6 +33,8 @@ public sealed class NotificacaoRepositoryFalso : INotificacaoRepository
         return Task.CompletedTask;
     }
 
+    public void Remover(Notificacao notificacao) => Notificacoes.Remove(notificacao);
+
     public Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken)
     {
         Notificacoes.Add(notificacao);
