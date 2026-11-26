@@ -44,8 +44,7 @@ public sealed class RefreshTests(PostgresFixture postgres) : IDisposable
         var resposta = await cliente.SendAsync(RefreshCookie.Post(Url, cookie: null));
 
         // Assert
-        resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        resposta.DeveSerProblema(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

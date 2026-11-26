@@ -39,16 +39,14 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
-        var existente = NovoUsuario.Gerar();
-        (await cliente.PostAsJsonAsync(Url, existente)).EnsureSuccessStatusCode();
+        var (existente, _) = await _factory.RegistrarUsuarioAsync();
         var novo = NovoUsuario.Gerar() with { Email = existente.Email.ToUpperInvariant() };
 
         // Act
         var resposta = await cliente.PostAsJsonAsync(Url, novo);
 
         // Assert
-        resposta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        resposta.DeveSerProblema(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -56,16 +54,14 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
-        var existente = NovoUsuario.Gerar() with { Nick = $"Mestre_{Guid.NewGuid():N}"[..20] };
-        (await cliente.PostAsJsonAsync(Url, existente)).EnsureSuccessStatusCode();
+        var (existente, _) = await _factory.RegistrarUsuarioAsync(NovoUsuario.Gerar() with { Nick = $"Mestre_{Guid.NewGuid():N}"[..20] });
         var novo = NovoUsuario.Gerar() with { Nick = existente.Nick.ToLowerInvariant() };
 
         // Act
         var resposta = await cliente.PostAsJsonAsync(Url, novo);
 
         // Assert
-        resposta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        resposta.DeveSerProblema(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -79,8 +75,7 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
         var resposta = await cliente.PostAsJsonAsync(Url, invalido);
 
         // Assert
-        resposta.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        resposta.DeveSerProblema(HttpStatusCode.BadRequest);
         using var corpo = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
         var campos = corpo.RootElement.GetProperty("errors").EnumerateObject().Select(p => p.Name);
         campos.ShouldBe(["nome", "nick", "email", "senha"], ignoreOrder: true);
@@ -89,12 +84,8 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
     [Fact]
     public async Task Register_DadosValidos_GravaSomenteOHashDaSenha()
     {
-        // Arrange
-        using var cliente = _factory.CriarCliente();
-        var usuario = NovoUsuario.Gerar();
-
         // Act
-        (await cliente.PostAsJsonAsync(Url, usuario)).EnsureSuccessStatusCode();
+        var (usuario, _) = await _factory.RegistrarUsuarioAsync();
 
         // Assert
         await using var conexao = new NpgsqlConnection(postgres.ConnectionString);

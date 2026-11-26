@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Time.Testing;
 using RPGuild.IntegrationTests.Infra;
@@ -20,8 +19,7 @@ public sealed class MeTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         var logado = await _factory.CriarUsuarioELogarAsync();
-        using var cliente = _factory.CriarCliente();
-        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", logado.AccessToken);
+        using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
 
         // Act
         var resposta = await cliente.GetAsync(Url);
@@ -57,8 +55,7 @@ public sealed class MeTests(PostgresFixture postgres) : IDisposable
         await using var factoryNoPassado = new RPGuildApiFactory(postgres, relogioNoPassado);
         var logado = await factoryNoPassado.CriarUsuarioELogarAsync();
 
-        using var cliente = _factory.CriarCliente();
-        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", logado.AccessToken);
+        using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
 
         // Act
         var resposta = await cliente.GetAsync(Url);

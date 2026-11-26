@@ -19,7 +19,7 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
-        var (usuario, id) = await RegistrarAsync(cliente);
+        var (usuario, criado) = await _factory.RegistrarUsuarioAsync();
 
         // Act
         var resposta = await cliente.PostAsJsonAsync(Url, new { usuario.Email, usuario.Senha });
@@ -31,7 +31,7 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
 
         var jwt = new JsonWebToken(corpo.AccessToken);
         jwt.Alg.ShouldBe("HS256");
-        jwt.Subject.ShouldBe(id.ToString());
+        jwt.Subject.ShouldBe(criado.Id.ToString());
         jwt.GetClaim("email").Value.ShouldBe(usuario.Email);
         jwt.GetClaim("nick").Value.ShouldBe(usuario.Nick);
         jwt.GetClaim("name").Value.ShouldBe(usuario.Nome);
@@ -42,7 +42,7 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
-        var (usuario, _) = await RegistrarAsync(cliente);
+        var (usuario, _) = await _factory.RegistrarUsuarioAsync();
 
         // Act
         var resposta = await cliente.PostAsJsonAsync(Url, new { usuario.Email, usuario.Senha });
@@ -66,7 +66,7 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
-        var (usuario, _) = await RegistrarAsync(cliente);
+        var (usuario, _) = await _factory.RegistrarUsuarioAsync();
 
         // Act
         var senhaErrada = await cliente.PostAsJsonAsync(Url, new { usuario.Email, Senha = "outra1234" });
@@ -88,7 +88,7 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
-        var (usuario, _) = await RegistrarAsync(cliente);
+        var (usuario, _) = await _factory.RegistrarUsuarioAsync();
         var tentativaErrada = new { usuario.Email, Senha = "outra1234" };
 
         for (var i = 1; i <= 4; i++)
@@ -102,16 +102,7 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         quinta.StatusCode.ShouldBe(HttpStatusCode.Locked);
-        comSenhaCerta.StatusCode.ShouldBe(HttpStatusCode.Locked);
-        comSenhaCerta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        comSenhaCerta.DeveSerProblema(HttpStatusCode.Locked);
         RefreshCookie.Ler(comSenhaCerta).ShouldBeNull();
-    }
-
-    private static async Task<(NovoUsuario Usuario, Guid Id)> RegistrarAsync(HttpClient cliente)
-    {
-        var usuario = NovoUsuario.Gerar();
-        var resposta = await cliente.PostAsJsonAsync("/api/auth/register", usuario);
-        resposta.EnsureSuccessStatusCode();
-        return (usuario, (await resposta.Content.ReadFromJsonAsync<UsuarioResponse>())!.Id);
     }
 }

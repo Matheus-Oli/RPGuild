@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -40,13 +41,31 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
         HandleCookies = false,
     });
 
-    public async Task<UsuarioLogado> CriarUsuarioELogarAsync()
+    public HttpClient CriarClienteAutenticado(string accessToken)
     {
-        var usuario = NovoUsuario.Gerar();
+        var cliente = CriarCliente();
+        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        return cliente;
+    }
+
+    /// <summary>
+    /// Cadastra um usuário novo (dados únicos) e devolve os dados enviados e a resposta.
+    /// </summary>
+    public async Task<(NovoUsuario Dados, UsuarioResponse Criado)> RegistrarUsuarioAsync(NovoUsuario? dados = null)
+    {
+        dados ??= NovoUsuario.Gerar();
         using var cliente = CriarCliente();
 
-        var registro = await cliente.PostAsJsonAsync("/api/auth/register", usuario);
+        var registro = await cliente.PostAsJsonAsync("/api/auth/register", dados);
         registro.EnsureSuccessStatusCode();
+
+        return (dados, (await registro.Content.ReadFromJsonAsync<UsuarioResponse>())!);
+    }
+
+    public async Task<UsuarioLogado> CriarUsuarioELogarAsync()
+    {
+        var (usuario, _) = await RegistrarUsuarioAsync();
+        using var cliente = CriarCliente();
 
         var login = await cliente.PostAsJsonAsync("/api/auth/login", new { usuario.Email, usuario.Senha });
         login.EnsureSuccessStatusCode();

@@ -64,6 +64,9 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
     }
 
+    public static string CalcularHash(string token) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
     private async Task RevogarFamiliaAsync(Guid familyId, DateTimeOffset agora, CancellationToken cancellationToken)
     {
         foreach (var token in await repositorio.ListarDaFamiliaAsync(familyId, cancellationToken))
@@ -73,9 +76,6 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
 
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
     }
-
-    public static string CalcularHash(string token) =>
-        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
     private (RefreshToken Token, RefreshTokenEmitido Emitido) Gerar(Guid userId, Guid familyId)
     {
