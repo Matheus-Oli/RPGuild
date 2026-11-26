@@ -35,18 +35,6 @@ public static class ClienteDaTaberna
         return (await resposta.Content.ReadFromJsonAsync<PedidoEnviadoResponse>())!;
     }
 
-    public static async Task<HttpResponseMessage> PostAsync(this RPGuildApiFactory factory, UsuarioLogado logado, string url)
-    {
-        using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
-        return await cliente.PostAsync(url, content: null);
-    }
-
-    public static async Task<HttpResponseMessage> DeleteAsync(this RPGuildApiFactory factory, UsuarioLogado logado, string url)
-    {
-        using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
-        return await cliente.DeleteAsync(url);
-    }
-
     public static async Task<PedidosResponse> PedidosDeAsync(this RPGuildApiFactory factory, UsuarioLogado logado)
     {
         using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);

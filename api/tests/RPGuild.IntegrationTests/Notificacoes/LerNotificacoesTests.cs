@@ -1,6 +1,5 @@
 using System.Net;
 using RPGuild.IntegrationTests.Infra;
-using RPGuild.IntegrationTests.Taberna;
 
 namespace RPGuild.IntegrationTests.Notificacoes;
 
