@@ -83,6 +83,30 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
         problemaSenha.ShouldBe(problemaEmail);
     }
 
+    [Fact]
+    public async Task Login_CincoSenhasErradas_Retorna423MesmoComASenhaCerta()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var (usuario, _) = await RegistrarAsync(cliente);
+        var tentativaErrada = new { usuario.Email, Senha = "outra1234" };
+
+        for (var i = 1; i <= 4; i++)
+        {
+            (await cliente.PostAsJsonAsync(Url, tentativaErrada)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        }
+
+        // Act
+        var quinta = await cliente.PostAsJsonAsync(Url, tentativaErrada);
+        var comSenhaCerta = await cliente.PostAsJsonAsync(Url, new { usuario.Email, usuario.Senha });
+
+        // Assert
+        quinta.StatusCode.ShouldBe(HttpStatusCode.Locked);
+        comSenhaCerta.StatusCode.ShouldBe(HttpStatusCode.Locked);
+        comSenhaCerta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        RefreshCookie.Ler(comSenhaCerta).ShouldBeNull();
+    }
+
     private static async Task<(NovoUsuario Usuario, Guid Id)> RegistrarAsync(HttpClient cliente)
     {
         var usuario = NovoUsuario.Gerar();
