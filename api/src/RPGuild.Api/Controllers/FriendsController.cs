@@ -40,4 +40,14 @@ public sealed class FriendsController(AmizadeService amizades) : ControllerBase
         var resultado = await amizades.AceitarAsync(User.Id(), id, cancellationToken);
         return this.ParaResposta(resultado, _ => NoContent());
     }
+
+    [HttpPost("requests/{id:guid}/decline")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Recusar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await amizades.RecusarAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
 }
