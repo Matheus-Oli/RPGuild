@@ -8,7 +8,7 @@ public interface IAuthService
 
     Task<Resultado<SessaoAutenticada>> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
 
-    Task<Resultado<SessaoAutenticada>> RenovarAsync(string refreshToken, CancellationToken cancellationToken);
+    Task<Resultado<SessaoAutenticada>> RenovarAsync(string? refreshToken, CancellationToken cancellationToken);
 
     Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken);
 }

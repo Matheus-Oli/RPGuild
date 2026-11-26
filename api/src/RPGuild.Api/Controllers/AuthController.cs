@@ -29,7 +29,7 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
     [ProducesResponseType<AccessTokenResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
-        var resultado = await auth.RenovarAsync(RefreshCookie.Ler(Request)!, cancellationToken);
+        var resultado = await auth.RenovarAsync(RefreshCookie.Ler(Request), cancellationToken);
         return this.ParaResposta(resultado, Sessao);
     }
 

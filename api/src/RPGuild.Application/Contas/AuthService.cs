@@ -22,8 +22,13 @@ public sealed class AuthService(IIdentityService identity, ITokenService tokens,
         return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
     }
 
-    public async Task<Resultado<SessaoAutenticada>> RenovarAsync(string refreshToken, CancellationToken cancellationToken)
+    public async Task<Resultado<SessaoAutenticada>> RenovarAsync(string? refreshToken, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return ErrosDeConta.SessaoInvalida;
+        }
+
         var rotacao = await refreshTokens.RotacionarAsync(refreshToken, cancellationToken);
         if (!rotacao.Sucesso)
         {
