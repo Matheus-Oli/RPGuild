@@ -168,12 +168,12 @@ E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSen
 | `Email:Senha` | a senha de app | `.env` (dev) / `Email__Senha` (produção) |
 | `Email:RemetenteEmail` | o endereço do remetente (o mesmo Gmail) | `.env` (dev) / `Email__RemetenteEmail` (produção) |
 
-Em dev, as credenciais ficam no `.env` da raiz do monorepo, que está no `.gitignore`. Copie do `.env.example` e preencha `Email__Usuario`, `Email__Senha` e `Email__RemetenteEmail`. A API carrega o `.env` com o DotNetEnv **só em Development** (os valores dele valem mais que os de variáveis de ambiente). Em produção, tudo vem de variáveis de ambiente. Nenhuma credencial vai para arquivo versionado.
+Em dev, as credenciais ficam no `.env` da raiz do monorepo, que está no `.gitignore`. Copie do `.env.example` e preencha `Email__Usuario`, `Email__Senha` e `Email__RemetenteEmail`. A API carrega o `.env` com o DotNetEnv **só em Development**. As variáveis de ambiente valem mais que o `.env`: ele só preenche o que o ambiente não definiu e não altera as variáveis do processo. Em produção, tudo vem de variáveis de ambiente. Nenhuma credencial vai para arquivo versionado.
 
 **Comportamento**
 
 - Sem `Email:Host`, `Email:Port`, `Email:Usuario`, `Email:Senha` ou `Email:RemetenteEmail`, a API **não sobe**, e a mensagem diz quais chaves faltam. Isso também vale para os comandos `dotnet ef`, que sobem a API em Development: o `.env` precisa estar preenchido.
-- Se o envio falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (201 no register, 204 no forgot-password). A falha vai para o log (`ILogger`) com o assunto e o destinatário, sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`, o ponto único de envio dos casos de uso. Ainda não há reenvio; está anotado `TODO(hangfire)` para mover o envio para uma fila.
+- Se o envio falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (201 no register, 204 no forgot-password). A falha vai para o log (`ILogger`) com o assunto e o destinatário mascarado (`ma***@gmail.com`; com 2 caracteres ou menos antes do `@`, `***@gmail.com`), sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`, o ponto único de envio dos casos de uso. Ainda não há reenvio; está anotado `TODO(hangfire)` para mover o envio para uma fila.
 - Nos testes, a `RPGuildApiFactory` troca o SMTP por um `FakeEmailSender`, que guarda as mensagens em memória (`factory.Emails.UltimaPara(email)`). O `SmtpEmailSender` não tem teste automatizado; ele é validado manualmente com o Gmail.
 
 ## Testes
