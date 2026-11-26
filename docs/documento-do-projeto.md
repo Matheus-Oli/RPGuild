@@ -384,8 +384,9 @@ POST /auth/reset-password {token, novaSenha}
 GET /me
 PUT /me {nome, nick, avatarPath}
 PUT /me/email {novoEmail, senha}
+POST /me/email/confirm {token}
 PUT /me/password {atual, nova}
-POST /uploads/sign {tipo: avatar|capa|banner|retrato} → {uploadUrl, path}
+POST /uploads/sign {tipo, contentType} → {uploadUrl, path, publicUrl}
 ```
 
 **Taberna**
