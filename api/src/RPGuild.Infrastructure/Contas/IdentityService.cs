@@ -62,7 +62,8 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         var usuario = await userManager.FindByEmailAsync(email);
         if (usuario is null || !await userManager.CheckPasswordAsync(usuario, senha))
         {
-            throw new NotImplementedException("Credenciais inválidas: tratado no próximo ciclo.");
+            // Mesma resposta para e-mail inexistente e senha errada: não revela quais e-mails têm conta.
+            return ErrosDeConta.CredenciaisInvalidas;
         }
 
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
