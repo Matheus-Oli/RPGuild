@@ -37,6 +37,30 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
         jwt.GetClaim("name").Value.ShouldBe(usuario.Nome);
     }
 
+    [Fact]
+    public async Task Login_CredenciaisValidas_DefineCookieDeRefreshSeguro()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var (usuario, _) = await RegistrarAsync(cliente);
+
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Url, new { usuario.Email, usuario.Senha });
+
+        // Assert
+        var cookie = RefreshCookie.Ler(resposta);
+        cookie.ShouldNotBeNull();
+        cookie.Value.Length.ShouldBeGreaterThan(0);
+        cookie.HttpOnly.ShouldBeTrue();
+        cookie.Secure.ShouldBeTrue();
+        cookie.SameSite.ShouldBe(Microsoft.Net.Http.Headers.SameSiteMode.None);
+        cookie.Path.ToString().ShouldBe("/api/auth");
+        cookie.Expires!.Value.ShouldBe(DateTimeOffset.UtcNow.AddDays(14), TimeSpan.FromMinutes(1));
+
+        var corpo = await resposta.Content.ReadAsStringAsync();
+        corpo.ShouldNotContain(cookie.Value.ToString());
+    }
+
     private static async Task<(NovoUsuario Usuario, Guid Id)> RegistrarAsync(HttpClient cliente)
     {
         var usuario = NovoUsuario.Gerar();
