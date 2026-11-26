@@ -19,6 +19,11 @@ if (builder.Environment.IsDevelopment())
     builder.Configuration.AdicionarDotEnv();
 }
 
+// O log de início e fim de requisição imprime a URL com a query, e nos hubs a query leva o access token.
+// Não dá para mascarar só esse trecho, então ele fica travado em Warning aqui, mesmo que a configuração suba
+// "Microsoft.AspNetCore" para Information.
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+
 builder.Services.AddControllers(options =>
 {
     // Obrigatoriedade dos campos fica a cargo do FluentValidation, não do nullable do C#.
