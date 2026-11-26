@@ -47,4 +47,23 @@ public sealed class RefreshTests(PostgresFixture postgres) : IDisposable
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
     }
+
+    [Fact]
+    public async Task Refresh_CookieAntigoReutilizado_Retorna401ERevogaOCookieNovo()
+    {
+        // Arrange
+        var logado = await _factory.CriarUsuarioELogarAsync();
+        using var cliente = _factory.CriarCliente();
+        var rotacao = await cliente.SendAsync(RefreshCookie.Post(Url, logado.RefreshCookie));
+        rotacao.EnsureSuccessStatusCode();
+        var cookieNovo = RefreshCookie.Extrair(rotacao);
+
+        // Act
+        var reuso = await cliente.SendAsync(RefreshCookie.Post(Url, logado.RefreshCookie));
+        var comCookieNovo = await cliente.SendAsync(RefreshCookie.Post(Url, cookieNovo));
+
+        // Assert
+        reuso.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        comCookieNovo.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
 }
