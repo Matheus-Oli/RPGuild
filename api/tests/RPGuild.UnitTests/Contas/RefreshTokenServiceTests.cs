@@ -37,4 +37,29 @@ public class RefreshTokenServiceTests
         salvo.RevokedAt.ShouldBeNull();
         _repositorio.VezesSalvo.ShouldBe(1);
     }
+
+    [Fact]
+    public async Task RotacionarAsync_TokenValido_RevogaOAntigoECriaUmNovoNaMesmaFamilia()
+    {
+        // Arrange
+        var emitido = await _service.EmitirAsync(_userId, CancellationToken.None);
+        _relogio.Advance(TimeSpan.FromHours(1));
+
+        // Act
+        var resultado = await _service.RotacionarAsync(emitido.Token, CancellationToken.None);
+
+        // Assert
+        resultado.Sucesso.ShouldBeTrue();
+        var novo = resultado.Valor!;
+        novo.Token.ShouldNotBe(emitido.Token);
+        novo.UserId.ShouldBe(_userId);
+        novo.ExpiresAt.ShouldBe(_relogio.GetUtcNow().AddDays(14));
+
+        var antigo = _repositorio.Tokens.Single(t => t.TokenHash == RefreshTokenService.CalcularHash(emitido.Token));
+        var atual = _repositorio.Tokens.Single(t => t.TokenHash == RefreshTokenService.CalcularHash(novo.Token));
+        antigo.RevokedAt.ShouldBe(_relogio.GetUtcNow());
+        antigo.ReplacedById.ShouldBe(atual.Id);
+        atual.FamilyId.ShouldBe(antigo.FamilyId);
+        atual.RevokedAt.ShouldBeNull();
+    }
 }
