@@ -144,6 +144,6 @@ public sealed class RPGuildApiFactory(
         var pedido = await cliente.PostAsJsonAsync("/api/auth/forgot-password", new { email });
         pedido.EnsureSuccessStatusCode();
 
-        return LinkDeRedefinicao.Token(Emails.UltimaPara(email)!);
+        return LinkNoEmail.Token(Emails.UltimaPara(email)!, LinkNoEmail.RedefinirSenha);
     }
 }

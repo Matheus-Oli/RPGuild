@@ -30,7 +30,7 @@ public sealed class ForgotPasswordTests(PostgresFixture postgres) : IDisposable
         mensagem.ShouldNotBeNull();
         mensagem.Assunto.ShouldBe("Redefinição de senha da RPGuild");
 
-        var link = LinkDeRedefinicao.Extrair(mensagem);
+        var link = LinkNoEmail.Extrair(mensagem, LinkNoEmail.RedefinirSenha);
         link.ShouldStartWith($"{RPGuildApiFactory.FrontBaseUrl}/redefinir-senha?token=");
         link.ShouldNotContain(usuario.Email, Case.Insensitive);
         link.ShouldNotContain(Uri.EscapeDataString(usuario.Email), Case.Insensitive);
