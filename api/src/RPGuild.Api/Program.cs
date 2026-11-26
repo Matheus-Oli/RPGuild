@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
+using RPGuild.Api.Http;
 using RPGuild.Application;
 using RPGuild.Infrastructure;
 
@@ -8,8 +8,11 @@ const string FrontCorsPolicy = "Front";
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers(options =>
+{
     // Obrigatoriedade dos campos fica a cargo do FluentValidation, não do nullable do C#.
-    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+    options.Filters.Add<ValidacaoFilter>();
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
