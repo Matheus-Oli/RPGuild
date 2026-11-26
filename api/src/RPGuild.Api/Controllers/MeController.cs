@@ -37,4 +37,16 @@ public sealed class MeController(IAuthService auth, IPerfilService perfil) : Con
         var resultado = await perfil.PedirTrocaDeEmailAsync(User.Id(), request, cancellationToken);
         return this.ParaResposta(resultado, _ => Accepted());
     }
+
+    // Anônimo: o link chega por e-mail e pode ser aberto sem estar logado. Se vier Bearer, a sessão dele continua.
+    [AllowAnonymous]
+    [HttpPost("email/confirm")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ConfirmEmail(ConfirmarTrocaDeEmailRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await perfil.ConfirmarTrocaDeEmailAsync(request, User.SessaoId(), cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
 }

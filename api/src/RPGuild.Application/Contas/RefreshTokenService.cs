@@ -79,6 +79,23 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Derruba as sessões do usuário menos a atual (família = claim "sid"). Sem sessão atual, derruba todas.
+    /// </summary>
+    public async Task RevogarOutrasSessoesAsync(Guid userId, Guid? sessaoAtual, CancellationToken cancellationToken)
+    {
+        var agora = relogio.GetUtcNow();
+        foreach (var token in await repositorio.ListarNaoRevogadosDoUsuarioAsync(userId, cancellationToken))
+        {
+            if (token.FamilyId != sessaoAtual)
+            {
+                token.Revogar(agora);
+            }
+        }
+
+        await repositorio.SalvarAlteracoesAsync(cancellationToken);
+    }
+
     public static string CalcularHash(string token) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 

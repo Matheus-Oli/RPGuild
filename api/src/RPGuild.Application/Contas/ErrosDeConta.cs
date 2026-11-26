@@ -22,6 +22,9 @@ public static class ErrosDeConta
     public static readonly Erro TokenDeRedefinicaoInvalido = new(
         TipoErro.Validacao, "Token inválido", "O link de redefinição é inválido, já foi usado ou expirou. Peça um novo.");
 
+    public static readonly Erro TokenDeTrocaDeEmailInvalido = new(
+        TipoErro.Validacao, "Token inválido", "O link de confirmação é inválido, já foi usado ou expirou. Peça a troca de e-mail de novo.");
+
     public static readonly Erro SenhaIncorreta = new(
         TipoErro.Validacao, "Senha incorreta", "A senha informada não confere.");
 

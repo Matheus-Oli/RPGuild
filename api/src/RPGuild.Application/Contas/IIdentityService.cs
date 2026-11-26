@@ -16,6 +16,12 @@ public interface IIdentityService
     Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Troca o e-mail (e o UserName) pelo pendente se o token for válido para ele, e limpa o pendente.
+    /// Erros: token inválido, expirado ou já usado; e-mail tomado por outra conta depois do pedido.
+    /// </summary>
+    Task<Resultado<EmailTrocado>> ConfirmarTrocaDeEmailAsync(TokenDeRedefinicao token, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Troca nome, nick e avatar. Erros: nick em uso por outro usuário, ou usuário que não existe mais.
     /// </summary>
     Task<Resultado<PerfilAtualizado>> AtualizarPerfilAsync(

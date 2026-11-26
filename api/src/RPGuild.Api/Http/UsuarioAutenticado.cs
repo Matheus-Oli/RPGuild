@@ -11,4 +11,10 @@ public static class UsuarioAutenticado
     public static Guid Id(this ClaimsPrincipal usuario) =>
         Guid.Parse(usuario.FindFirstValue(JwtRegisteredClaimNames.Sub)
             ?? throw new InvalidOperationException("Access token sem a claim 'sub'."));
+
+    /// <summary>
+    /// Sessão do access token (claim "sid" = família do refresh token), ou null em requisição anônima.
+    /// </summary>
+    public static Guid? SessaoId(this ClaimsPrincipal usuario) =>
+        Guid.TryParse(usuario.FindFirstValue(JwtRegisteredClaimNames.Sid), out var sessao) ? sessao : null;
 }

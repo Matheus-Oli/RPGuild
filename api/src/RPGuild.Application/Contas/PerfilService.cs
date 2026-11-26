@@ -9,6 +9,7 @@ namespace RPGuild.Application.Contas;
 public sealed class PerfilService(
     IIdentityService identity,
     IStorageService storage,
+    RefreshTokenService refreshTokens,
     EnvioDeEmail emails,
     FrontOptions front,
     ILogger<PerfilService> logger) : IPerfilService
@@ -50,6 +51,29 @@ public sealed class PerfilService(
         var dados = pedido.Valor!;
         var link = $"{front.BaseUrl.TrimEnd('/')}/confirmar-email?token={dados.Token.Codificar()}";
         await emails.EnviarAsync(EmailTemplates.ConfirmacaoDeNovoEmail(dados.Nome, dados.NovoEmail, link), cancellationToken);
+
+        return Vazio.Valor;
+    }
+
+    public async Task<Resultado<Vazio>> ConfirmarTrocaDeEmailAsync(
+        ConfirmarTrocaDeEmailRequest request, Guid? sessaoAtual, CancellationToken cancellationToken)
+    {
+        var token = TokenDeRedefinicao.Decodificar(request.Token);
+        if (token is null)
+        {
+            return ErrosDeConta.TokenDeTrocaDeEmailInvalido;
+        }
+
+        var troca = await identity.ConfirmarTrocaDeEmailAsync(token, cancellationToken);
+        if (!troca.Sucesso)
+        {
+            return troca.Erro!;
+        }
+
+        // O aviso vai para o endereço antigo: se quem trocou foi um invasor, o dono fica sabendo.
+        var trocado = troca.Valor!;
+        await emails.EnviarAsync(EmailTemplates.EmailAlterado(trocado.Nome, trocado.EmailAntigo, trocado.EmailNovo), cancellationToken);
+        await refreshTokens.RevogarOutrasSessoesAsync(trocado.UserId, sessaoAtual, cancellationToken);
 
         return Vazio.Valor;
     }

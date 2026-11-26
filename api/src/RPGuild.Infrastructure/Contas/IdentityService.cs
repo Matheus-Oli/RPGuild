@@ -183,6 +183,36 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return new DadosDeTrocaDeEmail(usuario.Nome, novoEmail, new TokenDeRedefinicao(usuario.Id, token));
     }
 
+    public async Task<Resultado<EmailTrocado>> ConfirmarTrocaDeEmailAsync(
+        TokenDeRedefinicao token, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(token.UserId.ToString());
+        if (usuario?.EmailPendente is not { } novoEmail)
+        {
+            return ErrosDeConta.TokenDeTrocaDeEmailInvalido;
+        }
+
+        var antigo = usuario.Email!;
+
+        // Tudo sai no mesmo update do ChangeEmailAsync: UserName = e-mail, como no cadastro.
+        usuario.UserName = novoEmail;
+        usuario.EmailPendente = null;
+
+        // O token só vale para o e-mail com que foi gerado, e a troca muda o security stamp: uso único.
+        var resultado = await userManager.ChangeEmailAsync(usuario, novoEmail, token.TokenIdentity);
+        if (resultado.Errors.Any(e => e.Code is nameof(IdentityErrorDescriber.DuplicateEmail) or nameof(IdentityErrorDescriber.DuplicateUserName)))
+        {
+            return ErrosDeConta.EmailEmUso;
+        }
+
+        if (!resultado.Succeeded)
+        {
+            return ErrosDeConta.TokenDeTrocaDeEmailInvalido;
+        }
+
+        return new EmailTrocado(usuario.Id, usuario.Nome, antigo, novoEmail);
+    }
+
     public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)
