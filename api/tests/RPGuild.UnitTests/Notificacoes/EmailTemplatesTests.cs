@@ -90,4 +90,21 @@ public class EmailTemplatesTests
         mensagem.Texto.ShouldContain("Esqueci minha senha");
         mensagem.Texto.ShouldContain(site);
     }
+
+    [Fact]
+    public void PedidoDeAmizade_QuemPediu_TemNomeArrobaNickEOLinkDaTaberna()
+    {
+        // Arrange
+        const string link = "http://localhost:5173/taberna";
+
+        // Act
+        var mensagem = EmailTemplates.PedidoDeAmizade(Nome, Email, "Muirenn Folha-Alta", "muirenn", link);
+
+        // Assert
+        mensagem.Para.ShouldBe(Email);
+        mensagem.Assunto.ShouldBe("Muirenn Folha-Alta te enviou um pedido de amizade na RPGuild");
+        mensagem.Texto.ShouldContain(Nome);
+        mensagem.Texto.ShouldContain("Muirenn Folha-Alta (@muirenn)");
+        mensagem.Texto.ShouldContain(link);
+    }
 }
