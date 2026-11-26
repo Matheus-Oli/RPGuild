@@ -17,12 +17,16 @@ namespace RPGuild.IntegrationTests.Infra;
 /// Troca a validade do token de redefinição. O provider de token do Identity usa o relógio real, não o <see cref="TimeProvider"/>.
 /// </param>
 /// <param name="configurarServicos">Ajuste extra nos serviços da API (ex.: um interceptor do EF que simula erro do banco).</param>
+/// <param name="usarHangfire">
+/// Liga o Hangfire de verdade (storage no container e server) no lugar da <see cref="FakeFilaDeEmail"/>. Só para os testes da fila.
+/// </param>
 public sealed class RPGuildApiFactory(
     string connectionString,
     TimeProvider? relogio = null,
     IEmailSender? emailSender = null,
     TimeSpan? validadeDoTokenDeRedefinicao = null,
-    Action<IServiceCollection>? configurarServicos = null)
+    Action<IServiceCollection>? configurarServicos = null,
+    bool usarHangfire = false)
     : WebApplicationFactory<Program>
 {
     public const string FrontBaseUrl = "http://localhost:5173";
@@ -39,8 +43,9 @@ public sealed class RPGuildApiFactory(
         TimeProvider? relogio = null,
         IEmailSender? emailSender = null,
         TimeSpan? validadeDoTokenDeRedefinicao = null,
-        Action<IServiceCollection>? configurarServicos = null)
-        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao, configurarServicos)
+        Action<IServiceCollection>? configurarServicos = null,
+        bool usarHangfire = false)
+        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao, configurarServicos, usarHangfire)
     {
     }
 
@@ -61,6 +66,7 @@ public sealed class RPGuildApiFactory(
         builder.UseSetting("Supabase:Url", "https://supabase.rpguild.invalid");
         builder.UseSetting("Supabase:ServiceKey", "nao-usada");
         builder.UseSetting("Supabase:Bucket", "imagens");
+        builder.UseSetting("Hangfire:Habilitado", usarHangfire ? "true" : "false");
 
         builder.ConfigureTestServices(services =>
         {
@@ -69,6 +75,12 @@ public sealed class RPGuildApiFactory(
 
             services.RemoveAll<IStorageService>();
             services.AddSingleton<IStorageService>(Storage);
+
+            if (!usarHangfire)
+            {
+                services.RemoveAll<IFilaDeEmail>();
+                services.AddSingleton<IFilaDeEmail>(Fila);
+            }
 
             if (relogio is not null)
             {
@@ -89,6 +101,11 @@ public sealed class RPGuildApiFactory(
     /// E-mails "enviados" pela API desta factory.
     /// </summary>
     public FakeEmailSender Emails { get; } = new();
+
+    /// <summary>
+    /// E-mails enfileirados pela API desta factory. Cada um é "enviado" na hora para o sender da factory.
+    /// </summary>
+    public FakeFilaDeEmail Fila => field ??= new FakeFilaDeEmail(emailSender ?? Emails);
 
     /// <summary>
     /// Arquivos "criados" e "apagados" no storage pela API desta factory.
