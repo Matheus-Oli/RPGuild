@@ -89,6 +89,42 @@ docker compose up -d
 dotnet ef database update --project api/src/RPGuild.Infrastructure --startup-project api/src/RPGuild.Api
 ```
 
+## Autenticação
+
+ASP.NET Identity (sem roles) para usuários e senhas, JWT para o access token e refresh token próprio, guardado no banco. Swagger em `/swagger` (só em Development), com o botão **Authorize** para colar o access token.
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `POST /api/auth/register` | `{nome, nick, email, senha}` | 201 `{id, nome, nick, email}` |
+| `POST /api/auth/login` | `{email, senha}` | 200 `{accessToken, expiresAt}` + cookie `rpguild_refresh` |
+| `POST /api/auth/refresh` | cookie | 200 `{accessToken, expiresAt}` + cookie novo |
+| `POST /api/auth/logout` | cookie | 204, revoga o refresh e apaga o cookie |
+| `GET /api/me` | `Authorization: Bearer <token>` | 200 `{id, nome, nick, email, avatarPath}` |
+
+Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) · 401 credencial ou sessão inválida (mensagem genérica, sem dizer se foi o e-mail ou a senha) · 409 e-mail ou nick em uso · 423 conta bloqueada.
+
+**Fluxo**
+
+1. **Access token** (JWT HS256, 15 min, claims `sub`, `email`, `nick`, `name`): vai no corpo do login/refresh e o front manda no header `Authorization: Bearer`. Validade conferida sem tolerância de relógio.
+2. **Refresh token** (64 bytes aleatórios, 14 dias): vai **só** no cookie `rpguild_refresh` (`HttpOnly`, `Secure`, `SameSite=None`, `Path=/api/auth`), nunca no corpo. No banco (`refresh_tokens`) fica só o hash SHA-256.
+3. **Rotação:** cada `refresh` revoga o token usado (`revoked_at`, `replaced_by_id`) e emite outro na mesma família (`family_id`). Cada login começa uma família nova.
+4. **Reuso:** se chegar um refresh já revogado, alguém pode ter copiado o cookie. A família inteira é revogada e a resposta é 401: os dois lados precisam entrar de novo.
+5. **Lockout:** 5 senhas erradas bloqueiam a conta por 15 minutos (423).
+6. **Regras de conta:** nick com 3 a 20 caracteres (`A-Z`, `a-z`, `0-9`, `_`), único sem diferenciar caixa (`nick_normalizado`); e-mail único; senha com 8+ caracteres, uma letra e um número.
+
+No front, as chamadas a `/api/auth/*` precisam de `credentials: "include"` para o navegador mandar e receber o cookie.
+
+**Configuração**
+
+| Chave | Para quê | Dev (`appsettings.Development.json`) | Produção (variável de ambiente) |
+| --- | --- | --- | --- |
+| `Jwt:Key` | Chave HS256, mínimo 32 bytes | chave fixa de dev | `Jwt__Key` (obrigatória; sem ela a API não sobe) |
+| `Jwt:Issuer` | Emissor do token | `rpguild-api` | `Jwt__Issuer` |
+| `Jwt:Audience` | Público do token | `rpguild-web` | `Jwt__Audience` |
+| `Cors:Origins` | Origens do front (com `AllowCredentials`) | `http://localhost:5173` | `Cors__Origins__0`, `Cors__Origins__1`... |
+
+Nos testes, a `RPGuildApiFactory` define uma chave própria e aceita um `TimeProvider` (por exemplo `FakeTimeProvider`) para controlar o relógio. O helper `CriarUsuarioELogarAsync()` devolve o access token e o cookie de refresh.
+
 ## Testes
 
 - `RPGuild.UnitTests`: regras de Domain e Application, organizadas por módulo (`Contas/`, `Fichas/`, ...). `Arquitetura/` verifica a regra de dependência entre camadas (NetArchTest).
