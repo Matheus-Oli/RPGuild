@@ -105,6 +105,11 @@ public sealed class ConexaoNoHub : IAsyncDisposable
         _recebidos.ShouldNotContain(r => r.Evento == evento, $"O evento {evento} não devia ter chegado.");
     }
 
+    /// <summary>
+    /// Esquece os eventos já recebidos, para o próximo passo do teste só enxergar os novos.
+    /// </summary>
+    public void Esquecer() => _recebidos.Clear();
+
     public async ValueTask DisposeAsync()
     {
         await _conexao.DisposeAsync();
