@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
+using RPGuild.Infrastructure.Comum;
 
 namespace RPGuild.IntegrationTests.Infra;
 
@@ -71,7 +72,8 @@ public sealed class RPGuildApiFactory(
 
             if (relogio is not null)
             {
-                services.Replace(ServiceDescriptor.Singleton(relogio));
+                // Mesma precisão do relógio da API.
+                services.Replace(ServiceDescriptor.Singleton<TimeProvider>(new RelogioEmMicrossegundos(relogio)));
             }
 
             if (validadeDoTokenDeRedefinicao is { } validade)
