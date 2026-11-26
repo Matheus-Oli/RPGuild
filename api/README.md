@@ -220,9 +220,54 @@ A chave é do formato novo (`sb_secret_...`), que não é JWT: ela vai **só** n
 - A `ServiceKey` **nunca** vai para o front, para o log ou para arquivo versionado. No `.env.example` as chaves ficam vazias.
 - Nos testes, a `RPGuildApiFactory` troca o storage por um `FakeStorageService`, que guarda em memória os paths com URL criada e os apagados (`factory.Storage.Apagados`) e pode simular falha na exclusão (`FalharAoApagar`). O `SupabaseStorageService` não tem teste automatizado; ele é validado manualmente contra o projeto real.
 
+## Taberna
+
+Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `GET /api/friends` | — | 200 `[{userId, nome, nick, avatarUrl, campanhasEmComum, amigosDesde}]` |
+| `GET /api/friends/requests` | — | 200 `{recebidos: [{id, de, criadoEm}], enviados: [{id, para, criadoEm}]}` |
+| `POST /api/friends/requests` | `{emailOuNick}` | 201 `{id, para, criadoEm}` · 400 vazio, inválido ou para si mesmo · 404 ninguém com esse e-mail ou nick · 409 já amigos ou pedido pendente |
+| `POST /api/friends/requests/{id}/accept` | — | 204 · 404 pedido inexistente ou que não é para mim · 409 não está pendente |
+| `POST /api/friends/requests/{id}/decline` | — | 204 · 404 · 409 (mesmas regras do aceite) |
+| `DELETE /api/friends/requests/{id}` | — | 204 (cancela o pedido enviado) · 404 inexistente ou não é meu · 409 não está pendente |
+| `DELETE /api/friends/{userId}` | — | 204 (desfaz a amizade) · 404 se não são amigos |
+
+`de` e `para` são `{userId, nome, nick, avatarUrl}`.
+
+**Modelo:** tabela `friendships` (`id`, `requester_id`, `addressee_id`, `status` = `pendente` / `aceita` / `recusada`, `created_at`, `responded_at`), com FKs para `users` em cascade. Há **uma linha por par de usuários**, não importa quem pediu: o índice único `ix_friendships_par` é sobre `(LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id))`. Esse índice é de expressão e fica só na migration `AddFriendships`, porque o EF não modela esse tipo.
+
+**Enviar**
+
+1. `emailOuNick` com `@` no meio é e-mail, e a busca é por e-mail. Senão, é nick, com ou sem `@` na frente (`@muirenn`), sem diferenciar caixa (`Nick.Normalizar`). Vazio, só `@` ou nick fora da regra dá 400.
+2. Para si mesmo dá 400 e ninguém encontrado dá 404.
+3. Já são amigos dá 409, e já ter um pedido pendente meu para a pessoa também.
+4. Pedido pendente **dela para mim** dá 409 com "Essa pessoa já te enviou um pedido. Aceite na sua lista." Não há aceite automático.
+5. Um pedido **recusado** pode ser reenviado na hora, por qualquer um dos dois. A linha recusada vira um pedido pendente novo, com o mesmo id, o novo sentido e o `created_at` do reenvio.
+6. O destinatário recebe o e-mail do aviso nº 5, com o nome e o @nick de quem pediu e o link `{Front:BaseUrl}/taberna`. Se o envio falhar, segue a regra de [E-mail](#e-mail): o 201 sai do mesmo jeito.
+
+**Responder e desfazer**
+
+- Só o destinatário aceita ou recusa, e só quem enviou cancela. Para qualquer outra pessoa, o pedido "não existe" (404).
+- Só pedido pendente pode ser respondido ou cancelado (409).
+- Aceitar e recusar preenchem o `responded_at`. Cancelar apaga a linha.
+- Os avisos nº 6 e 7 (aceito e recusado) são só sininho e entram no módulo de Notificações.
+- Remover amigo apaga a linha e quem foi removido não recebe nada (aviso nº 8 = N). Qualquer um dos dois pode remover, e depois os dois podem pedir de novo.
+
+**Listas**
+
+- `GET /api/friends`: as amizades mais recentes primeiro (`amigosDesde` = `responded_at` do aceite, decrescente). `campanhasEmComum` vale sempre 0 por enquanto (`TODO(campanhas)` no `AmizadeService`).
+- `GET /api/friends/requests`: só os pendentes, os mais novos primeiro, separados em recebidos e enviados.
+- **Nenhuma das duas listas é paginada.**
+- Nenhuma resposta da Taberna tem e-mail. Mesmo num pedido feito por e-mail, o enviado mostra o @nick.
+- O `avatarUrl` é a URL pública do avatar no storage (o mesmo `IStorageService.ObterUrlPublica` do perfil), ou null.
+
+Nos testes, `TabernaDeTeste` cria vários usuários logados (`CriarUsuariosLogadosAsync`, `CriarDoisUsuariosLogadosAsync`) e deixa dois amigos direto no banco (`TornarAmigosAsync`, com o "amigos desde" controlável). `ClienteDaTaberna` faz as chamadas e monta as URLs.
+
 ## E-mail
 
-E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem cinco: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**) e senha alterada (no `PUT /api/me/password`).
+E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem seis: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`) e pedido de amizade (no `POST /api/friends/requests`, para o destinatário).
 
 **Senha de app do Gmail**
 
