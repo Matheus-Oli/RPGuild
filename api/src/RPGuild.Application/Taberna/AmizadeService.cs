@@ -1,5 +1,6 @@
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Taberna;
 
@@ -9,6 +10,8 @@ public sealed class AmizadeService(
     IAmizadeRepository amizades,
     IIdentityService identity,
     IStorageService storage,
+    EnvioDeEmail emails,
+    FrontOptions front,
     TimeProvider relogio)
 {
     /// <summary>
@@ -54,6 +57,7 @@ public sealed class AmizadeService(
         }
 
         await amizades.SalvarAlteracoesAsync(cancellationToken);
+        await AvisarDestinatarioAsync(userId, destinatario, cancellationToken);
 
         return new PedidoEnviadoResponse(pedido.Id, Usuario(destinatario), pedido.CreatedAt);
     }
@@ -113,6 +117,21 @@ public sealed class AmizadeService(
         responder(pedido, relogio.GetUtcNow());
         await amizades.SalvarAlteracoesAsync(cancellationToken);
         return Vazio.Valor;
+    }
+
+    // Aviso nº 5 (sininho + e-mail): por enquanto só o e-mail. O sininho entra no módulo de Notificações.
+    private async Task AvisarDestinatarioAsync(Guid userId, DadosDoPerfil destinatario, CancellationToken cancellationToken)
+    {
+        var remetente = await identity.BuscarPerfilAsync(userId, cancellationToken);
+        if (remetente is null)
+        {
+            return;
+        }
+
+        var link = $"{front.BaseUrl.TrimEnd('/')}/taberna";
+        await emails.EnviarAsync(
+            EmailTemplates.PedidoDeAmizade(destinatario.Nome, destinatario.Email, remetente.Nome, remetente.Nick, link),
+            cancellationToken);
     }
 
     private UsuarioDaTaberna Usuario(DadosDoPerfil perfil) => Usuario(perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath);
