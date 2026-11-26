@@ -35,6 +35,19 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
     }
 
     [Fact]
+    public async Task Register_DadosValidos_EnviaBoasVindasComONome()
+    {
+        // Act
+        var (usuario, _) = await _factory.RegistrarUsuarioAsync();
+
+        // Assert
+        var mensagem = _factory.Emails.UltimaPara(usuario.Email);
+        mensagem.ShouldNotBeNull();
+        mensagem.Assunto.ShouldBe("Boas-vindas à RPGuild");
+        mensagem.Texto.ShouldContain(usuario.Nome);
+    }
+
+    [Fact]
     public async Task Register_EmailJaEmUso_Retorna409()
     {
         // Arrange
