@@ -24,6 +24,7 @@ public sealed class Notificador(
     IFilaDeEmail fila,
     EnvioDeEmail envioDireto,
     IIdentityService identity,
+    EventosDoSininho eventos,
     FrontOptions front,
     TimeProvider relogio) : INotificador
 {
@@ -43,8 +44,10 @@ public sealed class Notificador(
         {
             // Serializa pelo tipo concreto: os dados são as propriedades do aviso, sem o tipo.
             var dados = JsonSerializer.Serialize(aviso, aviso.GetType(), Json);
-            await notificacoes.AdicionarAsync(Notificacao.Criar(userId, aviso.Tipo, dados, relogio.GetUtcNow()), cancellationToken);
+            var notificacao = Notificacao.Criar(userId, aviso.Tipo, dados, relogio.GetUtcNow());
+            await notificacoes.AdicionarAsync(notificacao, cancellationToken);
             await notificacoes.SalvarAlteracoesAsync(cancellationToken);
+            await eventos.CriadaAsync(userId, notificacao, cancellationToken);
         }
 
         if (canais.Email == EnvioPorEmail.Nenhum)

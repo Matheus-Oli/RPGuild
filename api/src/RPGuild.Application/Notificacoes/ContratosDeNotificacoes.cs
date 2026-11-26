@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentValidation;
+using RPGuild.Domain.Notificacoes;
 
 namespace RPGuild.Application.Notificacoes;
 
@@ -28,7 +29,17 @@ public sealed class ListarNotificacoesRequestValidator : AbstractValidator<Lista
 }
 
 /// <param name="Dados">O objeto JSON gravado com a notificação; o front monta o texto a partir dele e do tipo.</param>
-public sealed record NotificacaoResponse(Guid Id, string Tipo, JsonElement Dados, bool Lida, DateTimeOffset CriadoEm);
+public sealed record NotificacaoResponse(Guid Id, string Tipo, JsonElement Dados, bool Lida, DateTimeOffset CriadoEm)
+{
+    /// <summary>
+    /// O mesmo formato no GET /api/notifications e no evento NotificationCreated.
+    /// </summary>
+    public static NotificacaoResponse De(Notificacao notificacao)
+    {
+        using var dados = JsonDocument.Parse(notificacao.Dados);
+        return new NotificacaoResponse(notificacao.Id, notificacao.Tipo, dados.RootElement.Clone(), notificacao.Lida, notificacao.CreatedAt);
+    }
+}
 
 /// <param name="ProximoCursor">Null na última página.</param>
 public sealed record PaginaDeNotificacoesResponse(IReadOnlyList<NotificacaoResponse> Itens, string? ProximoCursor);

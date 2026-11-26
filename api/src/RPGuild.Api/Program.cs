@@ -28,6 +28,7 @@ builder.Services.AddControllers(options =>
 builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, UsuarioPeloSub>();
+builder.Services.AddSingleton<INotificacoesTempoReal, HubNotificacoesTempoReal>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 

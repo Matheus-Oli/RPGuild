@@ -1,6 +1,4 @@
-using System.Text.Json;
 using RPGuild.Application.Comum;
-using RPGuild.Domain.Notificacoes;
 
 namespace RPGuild.Application.Notificacoes;
 
@@ -23,7 +21,7 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Tim
         var pagina = encontradas.Take(limite).ToList();
         var proximo = encontradas.Count > limite ? new CursorDeNotificacoes(pagina[^1].CreatedAt, pagina[^1].Id).Codificar() : null;
 
-        return new PaginaDeNotificacoesResponse([.. pagina.Select(Resposta)], proximo);
+        return new PaginaDeNotificacoesResponse([.. pagina.Select(NotificacaoResponse.De)], proximo);
     }
 
     public async Task<ContagemDeNaoLidasResponse> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
@@ -61,9 +59,4 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Tim
     public Task MarcarTodasComoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
         notificacoes.MarcarTodasComoLidasAsync(userId, relogio.GetUtcNow(), cancellationToken);
 
-    private static NotificacaoResponse Resposta(Notificacao notificacao)
-    {
-        using var dados = JsonDocument.Parse(notificacao.Dados);
-        return new NotificacaoResponse(notificacao.Id, notificacao.Tipo, dados.RootElement.Clone(), notificacao.Lida, notificacao.CreatedAt);
-    }
 }
