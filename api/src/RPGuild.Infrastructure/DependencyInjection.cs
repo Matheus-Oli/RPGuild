@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -23,9 +22,7 @@ public static class DependencyInjection
                 "Em desenvolvimento ela fica no appsettings.Development.json; em produção, na variável de ambiente ConnectionStrings__Default.");
         }
 
-        services.AddDbContext<AppDbContext>(options => options
-            .UseNpgsql(connectionString)
-            .UseSnakeCaseNamingConvention());
+        services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>(DatabaseHealthCheck);
