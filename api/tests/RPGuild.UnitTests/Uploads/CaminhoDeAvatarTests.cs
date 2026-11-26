@@ -49,4 +49,70 @@ public class CaminhoDeAvatarTests
         // Act & Assert
         Should.Throw<ArgumentException>(() => CaminhoDeAvatar.Gerar(UserId, "image/svg+xml"));
     }
+
+    [Fact]
+    public void PertenceAo_PathGeradoParaOUsuario_RetornaTrue()
+    {
+        // Arrange
+        var path = CaminhoDeAvatar.Gerar(UserId, "image/webp");
+
+        // Act & Assert
+        CaminhoDeAvatar.PertenceAo(UserId, path).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("avatars/{0}/foto.png")]
+    [InlineData("avatars/{0}/sub/foto.png")]
+    public void PertenceAo_ArquivoDentroDaPastaDoUsuario_RetornaTrue(string modelo)
+    {
+        // Act & Assert
+        CaminhoDeAvatar.PertenceAo(UserId, string.Format(modelo, UserId)).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void PertenceAo_PathVazio_RetornaFalse(string? path)
+    {
+        // Act & Assert
+        CaminhoDeAvatar.PertenceAo(UserId, path).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void PertenceAo_PastaDeOutroUsuario_RetornaFalse()
+    {
+        // Arrange
+        var path = CaminhoDeAvatar.Gerar(Guid.NewGuid(), "image/png");
+
+        // Act & Assert
+        CaminhoDeAvatar.PertenceAo(UserId, path).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("avatars/{0}x/foto.png")]
+    [InlineData("avatars/{0}")]
+    [InlineData("avatars/{0}/")]
+    [InlineData("/avatars/{0}/foto.png")]
+    [InlineData("Avatars/{0}/foto.png")]
+    [InlineData("capas/{0}/foto.png")]
+    [InlineData("x/avatars/{0}/foto.png")]
+    public void PertenceAo_ForaDaPastaOuPrefixoParecido_RetornaFalse(string modelo)
+    {
+        // Act & Assert
+        CaminhoDeAvatar.PertenceAo(UserId, string.Format(modelo, UserId)).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("avatars/{0}/../outro/foto.png")]
+    [InlineData("avatars/{0}/..")]
+    [InlineData("avatars/{0}/./foto.png")]
+    [InlineData("avatars/{0}//foto.png")]
+    [InlineData(@"avatars/{0}/..\foto.png")]
+    [InlineData(@"avatars/{0}/sub\foto.png")]
+    public void PertenceAo_ComPontoPontoOuSegmentoEstranho_RetornaFalse(string modelo)
+    {
+        // Act & Assert
+        CaminhoDeAvatar.PertenceAo(UserId, string.Format(modelo, UserId)).ShouldBeFalse();
+    }
 }
