@@ -24,6 +24,11 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         };
 
         var resultado = await userManager.CreateAsync(usuario, senha);
+        if (resultado.Errors.Any(e => e.Code is nameof(IdentityErrorDescriber.DuplicateEmail) or nameof(IdentityErrorDescriber.DuplicateUserName)))
+        {
+            return ErrosDeConta.EmailEmUso;
+        }
+
         if (!resultado.Succeeded)
         {
             throw new InvalidOperationException(string.Join("; ", resultado.Errors.Select(e => e.Code)));
