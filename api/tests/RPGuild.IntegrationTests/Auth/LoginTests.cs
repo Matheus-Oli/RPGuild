@@ -61,6 +61,28 @@ public sealed class LoginTests(PostgresFixture postgres) : IDisposable
         corpo.ShouldNotContain(cookie.Value.ToString());
     }
 
+    [Fact]
+    public async Task Login_SenhaErradaOuEmailInexistente_Retorna401ComAMesmaMensagem()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var (usuario, _) = await RegistrarAsync(cliente);
+
+        // Act
+        var senhaErrada = await cliente.PostAsJsonAsync(Url, new { usuario.Email, Senha = "outra1234" });
+        var emailInexistente = await cliente.PostAsJsonAsync(Url, new { Email = $"ninguem_{Guid.NewGuid():N}@teste.rpguild", usuario.Senha });
+
+        // Assert
+        senhaErrada.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        emailInexistente.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        RefreshCookie.Ler(senhaErrada).ShouldBeNull();
+
+        var problemaSenha = (await senhaErrada.Content.ReadFromJsonAsync<ProblemaResponse>())!;
+        var problemaEmail = (await emailInexistente.Content.ReadFromJsonAsync<ProblemaResponse>())!;
+        problemaSenha.Detail.ShouldNotBeNullOrWhiteSpace();
+        problemaSenha.ShouldBe(problemaEmail);
+    }
+
     private static async Task<(NovoUsuario Usuario, Guid Id)> RegistrarAsync(HttpClient cliente)
     {
         var usuario = NovoUsuario.Gerar();
