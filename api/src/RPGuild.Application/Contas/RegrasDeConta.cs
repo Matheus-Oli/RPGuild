@@ -10,6 +10,11 @@ public static class RegrasDeConta
 
     public static readonly TimeSpan ValidadeDoTokenDeRedefinicao = TimeSpan.FromHours(1);
 
+    /// <summary>
+    /// O token de troca de e-mail sai do mesmo provider do Identity que o de redefinição, então a validade é a mesma.
+    /// </summary>
+    public static readonly TimeSpan ValidadeDoTokenDeTrocaDeEmail = ValidadeDoTokenDeRedefinicao;
+
     public static IRuleBuilderOptions<T, string> Email<T>(this IRuleBuilder<T, string> regra) => regra
         .NotEmpty().WithMessage("Informe o e-mail.")
         .MaximumLength(EmailTamanhoMaximo).WithMessage($"O e-mail pode ter no máximo {EmailTamanhoMaximo} caracteres.")
