@@ -39,4 +39,28 @@ public static class NotificacoesDeTeste
 
         return id;
     }
+
+    /// <summary>
+    /// As notificações do usuário como estão no banco, das mais novas para as mais antigas.
+    /// </summary>
+    public static async Task<List<NotificacaoNoBanco>> NotificacoesNoBancoAsync(this RPGuildApiFactory factory, Guid userId)
+    {
+        await using var conexao = new NpgsqlConnection(factory.ConnectionString);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand(
+            "SELECT id, tipo, dados::text, lida_em IS NOT NULL FROM notifications WHERE user_id = @user ORDER BY created_at DESC, id",
+            conexao);
+        comando.Parameters.AddWithValue("user", userId);
+
+        var notificacoes = new List<NotificacaoNoBanco>();
+        await using var leitor = await comando.ExecuteReaderAsync();
+        while (await leitor.ReadAsync())
+        {
+            notificacoes.Add(new NotificacaoNoBanco(leitor.GetGuid(0), leitor.GetString(1), leitor.GetString(2), leitor.GetBoolean(3)));
+        }
+
+        return notificacoes;
+    }
 }
+
+public sealed record NotificacaoNoBanco(Guid Id, string Tipo, string Dados, bool Lida);
