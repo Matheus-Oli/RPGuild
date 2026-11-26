@@ -36,6 +36,10 @@ public sealed class RefreshToken
         ExpiresAt = agora + validade,
     };
 
+    public bool EstaRevogado => RevokedAt is not null;
+
+    public bool EstaExpirado(DateTimeOffset agora) => agora >= ExpiresAt;
+
     public void Revogar(DateTimeOffset agora, Guid? substitutoId = null)
     {
         RevokedAt ??= agora;

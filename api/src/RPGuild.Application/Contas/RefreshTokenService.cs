@@ -30,13 +30,14 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
     public async Task<Resultado<RefreshTokenEmitido>> RotacionarAsync(string token, CancellationToken cancellationToken)
     {
         var atual = await repositorio.BuscarPorHashAsync(CalcularHash(token), cancellationToken);
-        if (atual is null)
+        var agora = relogio.GetUtcNow();
+        if (atual is null || atual.EstaExpirado(agora))
         {
             return ErrosDeConta.SessaoInvalida;
         }
 
         var (novo, emitido) = Gerar(atual.UserId, atual.FamilyId);
-        atual.Revogar(relogio.GetUtcNow(), novo.Id);
+        atual.Revogar(agora, novo.Id);
 
         await repositorio.AdicionarAsync(novo, cancellationToken);
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
