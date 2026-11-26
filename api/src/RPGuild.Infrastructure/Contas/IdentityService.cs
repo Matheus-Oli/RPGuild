@@ -66,18 +66,10 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
             return ErrosDeConta.CredenciaisInvalidas;
         }
 
-        if (await userManager.IsLockedOutAsync(usuario))
+        if (await ConferirSenhaAsync(usuario, senha, ErrosDeConta.CredenciaisInvalidas) is { } erro)
         {
-            return ErrosDeConta.ContaBloqueada;
+            return erro;
         }
-
-        if (!await userManager.CheckPasswordAsync(usuario, senha))
-        {
-            await userManager.AccessFailedAsync(usuario);
-            return await userManager.IsLockedOutAsync(usuario) ? ErrosDeConta.ContaBloqueada : ErrosDeConta.CredenciaisInvalidas;
-        }
-
-        await userManager.ResetAccessFailedCountAsync(usuario);
 
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
     }
@@ -156,14 +148,14 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
             return ErrosDeConta.SessaoInvalida;
         }
 
+        if (await ConferirSenhaAsync(usuario, senha, ErrosDeConta.SenhaIncorreta) is { } erro)
+        {
+            return erro;
+        }
+
         if (userManager.NormalizeEmail(novoEmail) == usuario.NormalizedEmail)
         {
             return ErrosDeConta.MesmoEmail;
-        }
-
-        if (!await userManager.CheckPasswordAsync(usuario, senha))
-        {
-            return ErrosDeConta.SenhaIncorreta;
         }
 
         if (await userManager.FindByEmailAsync(novoEmail) is not null)
@@ -222,12 +214,12 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
             return ErrosDeConta.SessaoInvalida;
         }
 
-        var resultado = await userManager.ChangePasswordAsync(usuario, atual, nova);
-        if (resultado.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.PasswordMismatch)))
+        if (await ConferirSenhaAsync(usuario, atual, ErrosDeConta.SenhaIncorreta) is { } erro)
         {
-            return ErrosDeConta.SenhaIncorreta;
+            return erro;
         }
 
+        var resultado = await userManager.ChangePasswordAsync(usuario, atual, nova);
         if (!resultado.Succeeded)
         {
             // A política de senha já foi conferida no request; outro erro aqui é inesperado.
@@ -235,6 +227,28 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         }
 
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
+    }
+
+    /// <summary>
+    /// Confere a senha com o bloqueio do login: o contador é o mesmo para login, troca de e-mail e troca de senha.
+    /// Conta bloqueada dá <see cref="ErrosDeConta.ContaBloqueada"/> mesmo com a senha certa; senha errada soma um erro
+    /// (e bloqueia no quinto); senha certa zera o contador. Devolve null se a senha confere.
+    /// </summary>
+    private async Task<Erro?> ConferirSenhaAsync(ApplicationUser usuario, string senha, Erro senhaErrada)
+    {
+        if (await userManager.IsLockedOutAsync(usuario))
+        {
+            return ErrosDeConta.ContaBloqueada;
+        }
+
+        if (!await userManager.CheckPasswordAsync(usuario, senha))
+        {
+            await userManager.AccessFailedAsync(usuario);
+            return await userManager.IsLockedOutAsync(usuario) ? ErrosDeConta.ContaBloqueada : senhaErrada;
+        }
+
+        await userManager.ResetAccessFailedCountAsync(usuario);
+        return null;
     }
 
     public Task<DadosDoPerfil?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
