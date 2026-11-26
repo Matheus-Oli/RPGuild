@@ -36,6 +36,13 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
             return ErrosDeConta.SessaoInvalida;
         }
 
+        if (atual.EstaRevogado)
+        {
+            // Reuso de token já trocado: alguém pode ter copiado o cookie. Derruba a família inteira.
+            await RevogarFamiliaAsync(atual.FamilyId, agora, cancellationToken);
+            return ErrosDeConta.SessaoInvalida;
+        }
+
         var (novo, emitido) = Gerar(atual.UserId, atual.FamilyId);
         atual.Revogar(agora, novo.Id);
 
@@ -43,6 +50,16 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
 
         return emitido;
+    }
+
+    private async Task RevogarFamiliaAsync(Guid familyId, DateTimeOffset agora, CancellationToken cancellationToken)
+    {
+        foreach (var token in await repositorio.ListarDaFamiliaAsync(familyId, cancellationToken))
+        {
+            token.Revogar(agora);
+        }
+
+        await repositorio.SalvarAlteracoesAsync(cancellationToken);
     }
 
     public static string CalcularHash(string token) =>
