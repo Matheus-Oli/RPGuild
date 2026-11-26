@@ -26,6 +26,11 @@ public sealed class RPGuildApiFactory(
 
     public const string JwtKey = "testes-rpguild-chave-hs256-com-pelo-menos-32-bytes-0123456789";
 
+    /// <summary>
+    /// Banco desta factory, para os helpers que preparam dados direto no Postgres.
+    /// </summary>
+    public string ConnectionString => connectionString;
+
     public RPGuildApiFactory(
         PostgresFixture postgres,
         TimeProvider? relogio = null,
