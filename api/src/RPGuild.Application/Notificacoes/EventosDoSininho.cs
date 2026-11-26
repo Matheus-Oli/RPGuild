@@ -17,13 +17,25 @@ public sealed class EventosDoSininho(
     }
 
     /// <summary>
-    /// Depois de marcar uma como lida (só quando mudou o estado).
+    /// Depois de marcar uma como lida (só quando mudou o estado): as outras abas tiram o destaque dela.
     /// </summary>
-    public Task LidaAsync(Guid userId, CancellationToken cancellationToken) => NaoLidasAsync(userId, cancellationToken);
+    public async Task LidaAsync(Guid userId, Guid notificacaoId, CancellationToken cancellationToken)
+    {
+        await EmpurrarAsync("notificação lida", () => tempoReal.NotificacaoLidaAsync(userId, notificacaoId, cancellationToken));
+        await NaoLidasAsync(userId, cancellationToken);
+    }
 
-    public Task TodasLidasAsync(Guid userId, CancellationToken cancellationToken) => NaoLidasAsync(userId, cancellationToken);
+    public async Task TodasLidasAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        await EmpurrarAsync("todas lidas", () => tempoReal.TodasLidasAsync(userId, cancellationToken));
+        await NaoLidasAsync(userId, cancellationToken);
+    }
 
-    public Task ApagadaAsync(Guid userId, CancellationToken cancellationToken) => NaoLidasAsync(userId, cancellationToken);
+    public async Task ApagadaAsync(Guid userId, Guid notificacaoId, CancellationToken cancellationToken)
+    {
+        await EmpurrarAsync("notificação apagada", () => tempoReal.NotificacaoApagadaAsync(userId, notificacaoId, cancellationToken));
+        await NaoLidasAsync(userId, cancellationToken);
+    }
 
     // O total é recontado no banco: vale para todas as abas, mesmo as que perderam algum evento.
     private Task NaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>

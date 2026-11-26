@@ -42,7 +42,7 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Eve
         if (notificacao.MarcarComoLida(relogio.GetUtcNow()))
         {
             await notificacoes.SalvarAlteracoesAsync(cancellationToken);
-            await eventos.LidaAsync(userId, cancellationToken);
+            await eventos.LidaAsync(userId, id, cancellationToken);
         }
 
         return Vazio.Valor;
@@ -58,7 +58,7 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes, Eve
 
         notificacoes.Remover(notificacao);
         await notificacoes.SalvarAlteracoesAsync(cancellationToken);
-        await eventos.ApagadaAsync(userId, cancellationToken);
+        await eventos.ApagadaAsync(userId, id, cancellationToken);
         return Vazio.Valor;
     }
 

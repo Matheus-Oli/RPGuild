@@ -9,4 +9,10 @@ public interface INotificacoesTempoReal
     Task NotificacaoCriadaAsync(Guid userId, NotificacaoResponse notificacao, CancellationToken cancellationToken);
 
     Task NaoLidasAsync(Guid userId, ContagemDeNaoLidasResponse contagem, CancellationToken cancellationToken);
+
+    Task NotificacaoLidaAsync(Guid userId, Guid notificacaoId, CancellationToken cancellationToken);
+
+    Task TodasLidasAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task NotificacaoApagadaAsync(Guid userId, Guid notificacaoId, CancellationToken cancellationToken);
 }
