@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using RPGuild.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 
 namespace RPGuild.IntegrationTests.Infra;
@@ -9,7 +11,16 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public string ConnectionString => _container.GetConnectionString();
 
-    public Task InitializeAsync() => _container.StartAsync();
+    public async Task InitializeAsync()
+    {
+        await _container.StartAsync();
+
+        // Aplica o schema uma vez por execução; os testes já encontram as tabelas prontas.
+        var builder = new DbContextOptionsBuilder<AppDbContext>();
+        AppDbContextOptions.Configure(builder, ConnectionString);
+        await using var context = new AppDbContext(builder.Options);
+        await context.Database.MigrateAsync();
+    }
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
