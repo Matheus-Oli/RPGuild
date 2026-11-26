@@ -22,6 +22,12 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken)
     {
         var resultado = await auth.LoginAsync(request, cancellationToken);
-        return this.ParaResposta(resultado, sessao => Ok(new AccessTokenResponse(sessao.Access.Token, sessao.Access.ExpiresAt)));
+        return this.ParaResposta(resultado, Sessao);
+    }
+
+    private OkObjectResult Sessao(SessaoAutenticada sessao)
+    {
+        RefreshCookie.Definir(Response, sessao.Refresh);
+        return Ok(new AccessTokenResponse(sessao.Access.Token, sessao.Access.ExpiresAt));
     }
 }
