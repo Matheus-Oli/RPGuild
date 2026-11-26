@@ -33,11 +33,9 @@ public sealed class ListarPedidosTests(PostgresFixture postgres) : IDisposable
         // Assert
         pedidos.Recebidos.Select(p => p.Id).ShouldBe([deF.Id, deC.Id]);
         pedidos.Enviados.Select(p => p.Id).ShouldBe([paraG.Id, paraB.Id]);
-        // O Postgres guarda microssegundos; a resposta do POST traz os ticks do .NET.
-        pedidos.Recebidos[0].De.ShouldBe(new PessoaResponse(f.Id, f.Dados.Nome, f.Dados.Nick, null));
-        pedidos.Recebidos[0].CriadoEm.ShouldBe(deF.CriadoEm, TimeSpan.FromMilliseconds(1));
-        pedidos.Enviados[1].Para.ShouldBe(paraB.Para);
-        pedidos.Enviados[1].CriadoEm.ShouldBe(paraB.CriadoEm, TimeSpan.FromMilliseconds(1));
+        // O GET devolve exatamente o que o POST respondeu, inclusive o criadoEm.
+        pedidos.Recebidos[0].ShouldBe(new PedidoRecebidoResponse(deF.Id, new PessoaResponse(f.Id, f.Dados.Nome, f.Dados.Nick, null), deF.CriadoEm));
+        pedidos.Enviados[1].ShouldBe(paraB);
     }
 
     [Fact]

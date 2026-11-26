@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using RPGuild.Infrastructure.Comum;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Taberna;
@@ -18,7 +19,7 @@ public sealed class ListarAmigosTests(PostgresFixture postgres) : IDisposable
         // Arrange: B virou amigo há 2 dias, C há 1 dia e D agora; os pedidos foram de lados diferentes.
         var usuarios = await _factory.CriarUsuariosLogadosAsync(4);
         var (a, b, c, d) = (usuarios[0], usuarios[1], usuarios[2], usuarios[3]);
-        var agora = DateTimeOffset.UtcNow;
+        var agora = RelogioEmMicrossegundos.Truncar(DateTimeOffset.UtcNow);
         await _factory.TornarAmigosAsync(a, b, agora.AddDays(-2));
         await _factory.TornarAmigosAsync(c, a, agora.AddDays(-1));
         await _factory.TornarAmigosAsync(a, d, agora);
@@ -30,7 +31,7 @@ public sealed class ListarAmigosTests(PostgresFixture postgres) : IDisposable
         amigos.Select(x => x.UserId).ShouldBe([d.Id, c.Id, b.Id]);
         amigos.ShouldAllBe(x => x.CampanhasEmComum == 0);
         amigos[1].ShouldBe(new AmigoResponse(c.Id, c.Dados.Nome, c.Dados.Nick, null, 0, amigos[1].AmigosDesde));
-        amigos[1].AmigosDesde.ShouldBe(agora.AddDays(-1), TimeSpan.FromMilliseconds(1));
+        amigos[1].AmigosDesde.ShouldBe(agora.AddDays(-1));
     }
 
     [Fact]

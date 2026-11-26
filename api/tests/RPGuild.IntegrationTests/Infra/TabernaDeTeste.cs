@@ -1,4 +1,5 @@
 using Npgsql;
+using RPGuild.Infrastructure.Comum;
 
 namespace RPGuild.IntegrationTests.Infra;
 
@@ -31,7 +32,8 @@ public static class TabernaDeTeste
     public static async Task TornarAmigosAsync(
         this RPGuildApiFactory factory, UsuarioLogado a, UsuarioLogado b, DateTimeOffset? desde = null)
     {
-        var aceiteEm = desde ?? DateTimeOffset.UtcNow;
+        // Na precisão do Postgres, como o relógio da API: o que se grava é o que se lê.
+        var aceiteEm = RelogioEmMicrossegundos.Truncar(desde ?? DateTimeOffset.UtcNow);
 
         await using var conexao = new NpgsqlConnection(factory.ConnectionString);
         await conexao.OpenAsync();
