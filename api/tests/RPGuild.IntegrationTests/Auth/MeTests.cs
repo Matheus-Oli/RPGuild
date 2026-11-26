@@ -32,6 +32,27 @@ public sealed class MeTests(PostgresFixture postgres) : IDisposable
         perfil.Nick.ShouldBe(logado.Dados.Nick);
         perfil.Email.ShouldBe(logado.Dados.Email);
         perfil.AvatarPath.ShouldBeNull();
+        perfil.AvatarUrl.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetMe_ComAvatar_RetornaAUrlPublicaDoAvatar()
+    {
+        // Arrange
+        var logado = await _factory.CriarUsuarioELogarAsync();
+        using var cliente = _factory.CriarClienteAutenticado(logado.AccessToken);
+        var avatar = $"avatars/{ClaimsDoToken.UserId(logado.AccessToken)}/{Guid.NewGuid()}.png";
+        var atualizacao = await cliente.PutAsJsonAsync(Url, new { logado.Dados.Nome, logado.Dados.Nick, avatarPath = avatar });
+
+        // Act
+        var resposta = await cliente.GetAsync(Url);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var perfil = (await resposta.Content.ReadFromJsonAsync<PerfilResponse>())!;
+        perfil.AvatarPath.ShouldBe(avatar);
+        perfil.AvatarUrl.ShouldBe(_factory.Storage.ObterUrlPublica(avatar));
+        (await atualizacao.Content.ReadFromJsonAsync<PerfilResponse>())!.AvatarUrl.ShouldBe(perfil.AvatarUrl);
     }
 
     [Fact]

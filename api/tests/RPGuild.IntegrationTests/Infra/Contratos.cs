@@ -22,4 +22,4 @@ public sealed record UsuarioResponse(Guid Id, string Nome, string Nick, string E
 
 public sealed record ProblemaResponse(int Status, string Title, string? Detail);
 
-public sealed record PerfilResponse(Guid Id, string Nome, string Nick, string Email, string? AvatarPath);
+public sealed record PerfilResponse(Guid Id, string Nome, string Nick, string Email, string? AvatarPath, string? AvatarUrl);
