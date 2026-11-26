@@ -10,11 +10,13 @@ using Microsoft.IdentityModel.Tokens;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
+using RPGuild.Application.Taberna;
 using RPGuild.Application.Uploads;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
 using RPGuild.Infrastructure.Notificacoes;
 using RPGuild.Infrastructure.Persistence;
+using RPGuild.Infrastructure.Taberna;
 using RPGuild.Infrastructure.Uploads;
 
 namespace RPGuild.Infrastructure;
@@ -69,6 +71,7 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IAmizadeRepository, AmizadeRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);

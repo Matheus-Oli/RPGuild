@@ -18,6 +18,10 @@ public sealed class AmizadeRepositoryFalso : IAmizadeRepository
     public Task<Amizade?> BuscarDoParAsync(Guid usuarioA, Guid usuarioB, CancellationToken cancellationToken) =>
         Task.FromResult(Amizades.SingleOrDefault(a => a.Envolve(usuarioA) && a.Envolve(usuarioB)));
 
+    // A listagem é uma consulta com join nos usuários: coberta pelos testes de integração.
+    public Task<IReadOnlyList<PedidoPendente>> ListarPendentesAsync(Guid userId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task AdicionarAsync(Amizade amizade, CancellationToken cancellationToken)
     {
         Amizades.Add(amizade);

@@ -58,6 +58,14 @@ public sealed class AmizadeService(
         return new PedidoEnviadoResponse(pedido.Id, Usuario(destinatario), pedido.CreatedAt);
     }
 
+    public async Task<PedidosResponse> ListarPedidosAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var pendentes = await amizades.ListarPendentesAsync(userId, cancellationToken);
+        return new PedidosResponse(
+            [.. pendentes.Where(p => !p.Enviado).Select(p => new PedidoRecebidoResponse(p.Id, Usuario(p.Outro), p.CriadoEm))],
+            [.. pendentes.Where(p => p.Enviado).Select(p => new PedidoEnviadoResponse(p.Id, Usuario(p.Outro), p.CriadoEm))]);
+    }
+
     public Task<Resultado<Vazio>> AceitarAsync(Guid userId, Guid pedidoId, CancellationToken cancellationToken) =>
         ResponderAsync(userId, pedidoId, (pedido, agora) => pedido.Aceitar(agora), cancellationToken);
 
@@ -107,9 +115,10 @@ public sealed class AmizadeService(
         return Vazio.Valor;
     }
 
-    private UsuarioDaTaberna Usuario(DadosDoPerfil perfil) => new(
-        perfil.Id,
-        perfil.Nome,
-        perfil.Nick,
-        perfil.AvatarPath is null ? null : storage.ObterUrlPublica(perfil.AvatarPath));
+    private UsuarioDaTaberna Usuario(DadosDoPerfil perfil) => Usuario(perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath);
+
+    private UsuarioDaTaberna Usuario(PessoaDaLista pessoa) => Usuario(pessoa.Id, pessoa.Nome, pessoa.Nick, pessoa.AvatarPath);
+
+    private UsuarioDaTaberna Usuario(Guid id, string nome, string nick, string? avatarPath) =>
+        new(id, nome, nick, avatarPath is null ? null : storage.ObterUrlPublica(avatarPath));
 }
