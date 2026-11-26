@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
@@ -34,8 +33,7 @@ public class AmizadeServiceTests
             _repositorio,
             _identity,
             Substitute.For<IStorageService>(),
-            new EnvioDeEmail(Substitute.For<IEmailSender>(), NullLogger<EnvioDeEmail>.Instance),
-            new FrontOptions { BaseUrl = "http://localhost:5173" },
+            Substitute.For<INotificador>(),
             _relogio);
     }
 

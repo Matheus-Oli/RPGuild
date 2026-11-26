@@ -10,7 +10,7 @@ public sealed class PerfilService(
     IIdentityService identity,
     IStorageService storage,
     RefreshTokenService refreshTokens,
-    EnvioDeEmail emails,
+    INotificador notificador,
     FrontOptions front,
     ILogger<PerfilService> logger) : IPerfilService
 {
@@ -57,7 +57,7 @@ public sealed class PerfilService(
         // A confirmação vai para o endereço novo: prova que ele é da pessoa. Só o token opaco vai na URL.
         var dados = pedido.Valor!;
         var link = $"{front.BaseUrl.TrimEnd('/')}/confirmar-email?token={dados.Token.Codificar()}";
-        await emails.EnviarAsync(EmailTemplates.ConfirmacaoDeNovoEmail(dados.Nome, dados.NovoEmail, link), cancellationToken);
+        await notificador.NotificarAsync(userId, new ConfirmacaoDeEmail(link), dados.NovoEmail, cancellationToken);
 
         return Vazio.Valor;
     }
@@ -79,7 +79,7 @@ public sealed class PerfilService(
 
         // O aviso vai para o endereço antigo: se quem trocou foi um invasor, o dono fica sabendo.
         var trocado = troca.Valor!;
-        await emails.EnviarAsync(EmailTemplates.EmailAlterado(trocado.Nome, trocado.EmailAntigo, trocado.EmailNovo), cancellationToken);
+        await notificador.NotificarAsync(trocado.UserId, new EmailAlterado(trocado.EmailNovo), trocado.EmailAntigo, cancellationToken);
         await refreshTokens.RevogarOutrasSessoesAsync(trocado.UserId, sessaoAtual, cancellationToken);
 
         return Vazio.Valor;
@@ -95,7 +95,7 @@ public sealed class PerfilService(
         }
 
         var usuario = troca.Valor!;
-        await emails.EnviarAsync(EmailTemplates.SenhaAlterada(usuario.Nome, usuario.Email, front.BaseUrl), cancellationToken);
+        await notificador.NotificarAsync(userId, new SenhaAlterada(), cancellationToken);
         await refreshTokens.RevogarOutrasSessoesAsync(userId, sessaoAtual, cancellationToken);
 
         return Vazio.Valor;

@@ -10,8 +10,7 @@ public sealed class AmizadeService(
     IAmizadeRepository amizades,
     IIdentityService identity,
     IStorageService storage,
-    EnvioDeEmail emails,
-    FrontOptions front,
+    INotificador notificador,
     TimeProvider relogio)
 {
     /// <summary>
@@ -66,7 +65,7 @@ public sealed class AmizadeService(
             return ErrosDaTaberna.PedidoRecebidoPendente;
         }
 
-        await AvisarDestinatarioAsync(userId, destinatario, cancellationToken);
+        await AvisarDestinatarioAsync(userId, pedido.Id, destinatario.Id, cancellationToken);
 
         return new PedidoEnviadoResponse(pedido.Id, Usuario(destinatario), pedido.CreatedAt);
     }
@@ -96,11 +95,27 @@ public sealed class AmizadeService(
             [.. pendentes.Where(p => p.Enviado).Select(p => new PedidoEnviadoResponse(p.Id, Usuario(p.Outro), p.CriadoEm))]);
     }
 
+    /// <summary>
+    /// Quem pediu recebe o aviso nº 6 (só sininho).
+    /// </summary>
     public Task<Resultado<Vazio>> AceitarAsync(Guid userId, Guid pedidoId, CancellationToken cancellationToken) =>
-        ResponderAsync(userId, pedidoId, (pedido, agora) => pedido.Aceitar(agora), cancellationToken);
+        ResponderAsync(
+            userId,
+            pedidoId,
+            (pedido, agora) => pedido.Aceitar(agora),
+            quem => new AmizadeAceita(quem.Id, quem.Nome, quem.Nick),
+            cancellationToken);
 
+    /// <summary>
+    /// Quem pediu recebe o aviso nº 7 (só sininho).
+    /// </summary>
     public Task<Resultado<Vazio>> RecusarAsync(Guid userId, Guid pedidoId, CancellationToken cancellationToken) =>
-        ResponderAsync(userId, pedidoId, (pedido, agora) => pedido.Recusar(agora), cancellationToken);
+        ResponderAsync(
+            userId,
+            pedidoId,
+            (pedido, agora) => pedido.Recusar(agora),
+            quem => new AmizadeRecusada(quem.Id, quem.Nome, quem.Nick),
+            cancellationToken);
 
     /// <summary>
     /// Só quem enviou cancela, e só enquanto está pendente. O pedido é apagado.
@@ -143,7 +158,11 @@ public sealed class AmizadeService(
     /// Só o destinatário responde, e só enquanto está pendente. Para os outros, o pedido "não existe" (404).
     /// </summary>
     private async Task<Resultado<Vazio>> ResponderAsync(
-        Guid userId, Guid pedidoId, Action<Amizade, DateTimeOffset> responder, CancellationToken cancellationToken)
+        Guid userId,
+        Guid pedidoId,
+        Action<Amizade, DateTimeOffset> responder,
+        Func<DadosDoPerfil, Aviso> aviso,
+        CancellationToken cancellationToken)
     {
         var pedido = await amizades.BuscarPorIdAsync(pedidoId, cancellationToken);
         if (pedido is null || pedido.AddresseeId != userId)
@@ -158,11 +177,18 @@ public sealed class AmizadeService(
 
         responder(pedido, relogio.GetUtcNow());
         await amizades.SalvarAlteracoesAsync(cancellationToken);
+
+        // Com o nome e o nick de quem respondeu como estão agora.
+        if (await identity.BuscarPerfilAsync(userId, cancellationToken) is { } quemRespondeu)
+        {
+            await notificador.NotificarAsync(pedido.RequesterId, aviso(quemRespondeu), cancellationToken);
+        }
+
         return Vazio.Valor;
     }
 
-    // Aviso nº 5 (sininho + e-mail): por enquanto só o e-mail. O sininho entra no módulo de Notificações.
-    private async Task AvisarDestinatarioAsync(Guid userId, DadosDoPerfil destinatario, CancellationToken cancellationToken)
+    // Aviso nº 5 (sininho + e-mail), com o nome e o nick de quem pediu como estão agora.
+    private async Task AvisarDestinatarioAsync(Guid userId, Guid pedidoId, Guid destinatarioId, CancellationToken cancellationToken)
     {
         var remetente = await identity.BuscarPerfilAsync(userId, cancellationToken);
         if (remetente is null)
@@ -170,10 +196,8 @@ public sealed class AmizadeService(
             return;
         }
 
-        var link = $"{front.BaseUrl.TrimEnd('/')}/taberna";
-        await emails.EnviarAsync(
-            EmailTemplates.PedidoDeAmizade(destinatario.Nome, destinatario.Email, remetente.Nome, remetente.Nick, link),
-            cancellationToken);
+        await notificador.NotificarAsync(
+            destinatarioId, new AmizadeRecebida(pedidoId, userId, remetente.Nome, remetente.Nick), cancellationToken);
     }
 
     private UsuarioDaTaberna Usuario(DadosDoPerfil perfil) => Usuario(perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath);

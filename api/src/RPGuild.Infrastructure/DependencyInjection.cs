@@ -26,6 +26,13 @@ public static class DependencyInjection
 {
     public const string DatabaseHealthCheck = "database";
 
+    /// <summary>
+    /// Os hubs do SignalR aceitam o access token na query "access_token"; o resto da API, só no header.
+    /// </summary>
+    public const string CaminhoDosHubs = "/hubs";
+
+    private const string TokenNaQuery = "access_token";
+
     // O /health precisa responder rápido mesmo com o banco fora; a conexão da aplicação segue com o timeout padrão.
     private static readonly TimeSpan DatabaseHealthCheckTimeout = TimeSpan.FromMilliseconds(1500);
 
@@ -74,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAmizadeRepository, AmizadeRepository>();
+        services.AddScoped<INotificacaoRepository, NotificacaoRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);
@@ -103,6 +111,20 @@ public static class DependencyInjection
                     NameClaimType = JwtRegisteredClaimNames.Name,
                     // O padrão aceita 5 min além da validade; o access token já é curto e o refresh cobre a renovação.
                     ClockSkew = TimeSpan.Zero,
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    // No navegador, o WebSocket não manda header: nos hubs (e só neles) o token vem na query.
+                    OnMessageReceived = context =>
+                    {
+                        var token = context.Request.Query[TokenNaQuery];
+                        if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(CaminhoDosHubs))
+                        {
+                            context.Token = token;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                 };
             });
 

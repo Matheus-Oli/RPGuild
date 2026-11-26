@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RPGuild.Domain.Contas;
+using RPGuild.Domain.Notificacoes;
 using RPGuild.Domain.Taberna;
 using RPGuild.Infrastructure.Identity;
 
@@ -12,6 +13,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public DbSet<Amizade> Amizades => Set<Amizade>();
+
+    public DbSet<Notificacao> Notificacoes => Set<Notificacao>();
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

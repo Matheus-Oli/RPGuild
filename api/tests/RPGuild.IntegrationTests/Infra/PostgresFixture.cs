@@ -57,6 +57,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         var respawner = await Respawner.CreateAsync(conexao, new RespawnerOptions
         {
             DbAdapter = DbAdapter.Postgres,
+            // Só o schema do EF: o "hangfire" (fila e jobs, criado pela própria lib) fica de fora.
             SchemasToInclude = ["public"],
             TablesToIgnore = [new Table("__EFMigrationsHistory")],
         });

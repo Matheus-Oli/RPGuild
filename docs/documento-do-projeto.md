@@ -478,17 +478,20 @@ DELETE /documents/{id}
 **Notificações**
 
 ```
-GET /notifications
+GET /notifications?naoLidas=&cursor=&limite= → {itens: [{id, tipo, dados, lida, criadoEm}], proximoCursor}
 GET /notifications/unread-count
 POST /notifications/{id}/read
 POST /notifications/read-all
+DELETE /notifications/{id}
 ```
+
+`naoLidas=true` traz só as não lidas. A lista é paginada por cursor: `limite` padrão 20 (máximo 50), e o `cursor` é o `proximoCursor` da página anterior.
 
 **Tempo real (SignalR)**
 
 ```
 /hubs/campaign JoinCampaign(id) · CharacterUpdated · RollCreated · MemberChanged · SessionChanged · DocumentChanged
-/hubs/notifications NotificationCreated · UnreadCount
+/hubs/notifications NotificationCreated · UnreadCount · NotificationRead · NotificationsReadAll · NotificationDeleted
 ```
 
 ## Backlog e sprints
