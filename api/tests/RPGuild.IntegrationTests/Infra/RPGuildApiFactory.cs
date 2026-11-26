@@ -116,6 +116,14 @@ public sealed class RPGuildApiFactory(
     public async Task<UsuarioLogado> CriarUsuarioELogarAsync()
     {
         var (usuario, _) = await RegistrarUsuarioAsync();
+        return await LogarAsync(usuario);
+    }
+
+    /// <summary>
+    /// Abre uma sessão nova (outra família de refresh token) para um usuário que já existe.
+    /// </summary>
+    public async Task<UsuarioLogado> LogarAsync(NovoUsuario usuario)
+    {
         using var cliente = CriarCliente();
 
         var login = await cliente.PostAsJsonAsync("/api/auth/login", new { usuario.Email, usuario.Senha });
@@ -145,5 +153,29 @@ public sealed class RPGuildApiFactory(
         pedido.EnsureSuccessStatusCode();
 
         return LinkNoEmail.Token(Emails.UltimaPara(email)!, LinkNoEmail.RedefinirSenha);
+    }
+
+    /// <summary>
+    /// Pede a troca de e-mail do usuário logado e devolve o e-mail novo e o token opaco que chegou nele.
+    /// </summary>
+    public async Task<(string NovoEmail, string Token)> PedirTrocaDeEmailAsync(UsuarioLogado logado, string? novoEmail = null)
+    {
+        novoEmail ??= NovoUsuario.Gerar().Email;
+        using var cliente = CriarClienteAutenticado(logado.AccessToken);
+
+        var pedido = await cliente.PutAsJsonAsync("/api/me/email", new { novoEmail, senha = logado.Dados.Senha });
+        pedido.EnsureSuccessStatusCode();
+
+        return (novoEmail, LinkNoEmail.Token(Emails.UltimaPara(novoEmail)!, LinkNoEmail.ConfirmarEmail));
+    }
+
+    /// <summary>
+    /// Se o refresh desta sessão ainda é aceito. Rotaciona o cookie: use uma vez por sessão.
+    /// </summary>
+    public async Task<bool> SessaoContinuaAsync(string refreshCookie)
+    {
+        using var cliente = CriarCliente();
+        using var resposta = await cliente.SendAsync(RefreshCookie.Post("/api/auth/refresh", refreshCookie));
+        return resposta.IsSuccessStatusCode;
     }
 }
