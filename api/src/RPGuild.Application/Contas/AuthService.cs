@@ -35,7 +35,7 @@ public sealed class AuthService(
 
         var usuario = credenciais.Valor!;
         var refresh = await refreshTokens.EmitirAsync(usuario.Id, cancellationToken);
-        return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
+        return new SessaoAutenticada(tokens.GerarAccessToken(usuario, refresh.FamilyId), refresh);
     }
 
     public async Task<Resultado<SessaoAutenticada>> RenovarAsync(string? refreshToken, CancellationToken cancellationToken)
@@ -59,7 +59,7 @@ public sealed class AuthService(
         }
 
         var usuario = new UsuarioResponse(perfil.Id, perfil.Nome, perfil.Nick, perfil.Email);
-        return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
+        return new SessaoAutenticada(tokens.GerarAccessToken(usuario, refresh.FamilyId), refresh);
     }
 
     public async Task<Resultado<Vazio>> EsqueciSenhaAsync(EsqueciSenhaRequest request, CancellationToken cancellationToken)

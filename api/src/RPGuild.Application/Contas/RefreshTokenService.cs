@@ -6,7 +6,8 @@ using RPGuild.Domain.Contas;
 
 namespace RPGuild.Application.Contas;
 
-public sealed record RefreshTokenEmitido(string Token, Guid UserId, DateTimeOffset ExpiresAt);
+/// <param name="FamilyId">Família do token: identifica a sessão (claim "sid" do access token).</param>
+public sealed record RefreshTokenEmitido(string Token, Guid UserId, Guid FamilyId, DateTimeOffset ExpiresAt);
 
 public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, TimeProvider relogio)
 {
@@ -96,6 +97,6 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         var valor = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(TamanhoEmBytes));
         var token = RefreshToken.Criar(userId, CalcularHash(valor), familyId, relogio.GetUtcNow(), Validade);
 
-        return (token, new RefreshTokenEmitido(valor, userId, token.ExpiresAt));
+        return (token, new RefreshTokenEmitido(valor, userId, familyId, token.ExpiresAt));
     }
 }

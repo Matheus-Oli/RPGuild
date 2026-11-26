@@ -13,7 +13,7 @@ public sealed class JwtTokenService(JwtOptions options, TimeProvider relogio) : 
 
     private static readonly JsonWebTokenHandler Handler = new();
 
-    public AccessToken GerarAccessToken(UsuarioResponse usuario)
+    public AccessToken GerarAccessToken(UsuarioResponse usuario, Guid sessaoId)
     {
         var agora = relogio.GetUtcNow();
         var expiraEm = agora + Validade;
@@ -31,6 +31,7 @@ public sealed class JwtTokenService(JwtOptions options, TimeProvider relogio) : 
                 [JwtRegisteredClaimNames.Email] = usuario.Email,
                 [JwtRegisteredClaimNames.Name] = usuario.Nome,
                 [ClaimNick] = usuario.Nick,
+                [JwtRegisteredClaimNames.Sid] = sessaoId.ToString(),
                 [JwtRegisteredClaimNames.Jti] = Guid.NewGuid().ToString(),
             },
             SigningCredentials = new SigningCredentials(ChaveDeAssinatura(options), SecurityAlgorithms.HmacSha256),

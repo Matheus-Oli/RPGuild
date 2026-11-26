@@ -4,5 +4,6 @@ public sealed record AccessToken(string Token, DateTimeOffset ExpiresAt);
 
 public interface ITokenService
 {
-    AccessToken GerarAccessToken(UsuarioResponse usuario);
+    /// <param name="sessaoId">Família do refresh token desta sessão; vai na claim "sid".</param>
+    AccessToken GerarAccessToken(UsuarioResponse usuario, Guid sessaoId);
 }
