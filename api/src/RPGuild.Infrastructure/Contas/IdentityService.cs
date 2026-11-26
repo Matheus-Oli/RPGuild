@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -252,8 +253,20 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
     }
 
     public Task<DadosDoPerfil?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
+        BuscarAsync(u => u.Id == userId, cancellationToken);
+
+    public Task<DadosDoPerfil?> BuscarPorEmailAsync(string email, CancellationToken cancellationToken)
+    {
+        var normalizado = userManager.NormalizeEmail(email);
+        return BuscarAsync(u => u.NormalizedEmail == normalizado, cancellationToken);
+    }
+
+    public Task<DadosDoPerfil?> BuscarPorNickAsync(string nickNormalizado, CancellationToken cancellationToken) =>
+        BuscarAsync(u => u.NickNormalizado == nickNormalizado, cancellationToken);
+
+    private Task<DadosDoPerfil?> BuscarAsync(Expression<Func<ApplicationUser, bool>> filtro, CancellationToken cancellationToken) =>
         userManager.Users
-            .Where(u => u.Id == userId)
+            .Where(filtro)
             .Select(u => new DadosDoPerfil(u.Id, u.Nome, u.Nick, u.Email!, u.AvatarPath))
             .SingleOrDefaultAsync(cancellationToken);
 }
