@@ -1,5 +1,6 @@
 using System.Buffers.Text;
 using Microsoft.Extensions.Time.Testing;
+using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 
 namespace RPGuild.UnitTests.Contas;
@@ -61,5 +62,21 @@ public class RefreshTokenServiceTests
         antigo.ReplacedById.ShouldBe(atual.Id);
         atual.FamilyId.ShouldBe(antigo.FamilyId);
         atual.RevokedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task RotacionarAsync_TokenExpirado_RetornaNaoAutorizado()
+    {
+        // Arrange
+        var emitido = await _service.EmitirAsync(_userId, CancellationToken.None);
+        _relogio.Advance(RefreshTokenService.Validade);
+
+        // Act
+        var resultado = await _service.RotacionarAsync(emitido.Token, CancellationToken.None);
+
+        // Assert
+        resultado.Sucesso.ShouldBeFalse();
+        resultado.Erro!.Tipo.ShouldBe(TipoErro.NaoAutorizado);
+        _repositorio.Tokens.ShouldHaveSingleItem();
     }
 }
