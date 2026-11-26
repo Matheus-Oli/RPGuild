@@ -31,4 +31,21 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
         corpo.Nick.ShouldBe(usuario.Nick);
         corpo.Email.ShouldBe(usuario.Email);
     }
+
+    [Fact]
+    public async Task Register_EmailJaEmUso_Retorna409()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var existente = NovoUsuario.Gerar();
+        (await cliente.PostAsJsonAsync(Url, existente)).EnsureSuccessStatusCode();
+        var novo = NovoUsuario.Gerar() with { Email = existente.Email.ToUpperInvariant() };
+
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Url, novo);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+    }
 }
