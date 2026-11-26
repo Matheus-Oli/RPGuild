@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RPGuild.Application.Notificacoes;
+using RPGuild.Application.Uploads;
 
 namespace RPGuild.IntegrationTests.Infra;
 
@@ -47,11 +48,18 @@ public sealed class RPGuildApiFactory(
         builder.UseSetting("Email:Usuario", "testes@rpguild.invalid");
         builder.UseSetting("Email:Senha", "nao-usada");
         builder.UseSetting("Email:RemetenteEmail", "testes@rpguild.invalid");
+        // Idem para o Supabase: o storage de verdade é trocado pelo FakeStorageService.
+        builder.UseSetting("Supabase:Url", "https://supabase.rpguild.invalid");
+        builder.UseSetting("Supabase:ServiceKey", "nao-usada");
+        builder.UseSetting("Supabase:Bucket", "imagens");
 
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IEmailSender>();
             services.AddSingleton(emailSender ?? Emails);
+
+            services.RemoveAll<IStorageService>();
+            services.AddSingleton<IStorageService>(Storage);
 
             if (relogio is not null)
             {
@@ -69,6 +77,11 @@ public sealed class RPGuildApiFactory(
     /// E-mails "enviados" pela API desta factory.
     /// </summary>
     public FakeEmailSender Emails { get; } = new();
+
+    /// <summary>
+    /// Arquivos "criados" e "apagados" no storage pela API desta factory.
+    /// </summary>
+    public FakeStorageService Storage { get; } = new();
 
     /// <summary>
     /// Cliente em https, sem cookie automático: os testes mandam o cookie de refresh explicitamente.

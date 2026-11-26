@@ -14,6 +14,7 @@ using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
 using RPGuild.Infrastructure.Notificacoes;
 using RPGuild.Infrastructure.Persistence;
+using RPGuild.Infrastructure.Uploads;
 
 namespace RPGuild.Infrastructure;
 
@@ -75,6 +76,8 @@ public static class DependencyInjection
         services.AddSingleton(LerFrontOptions(configuration));
         services.AddSingleton(EmailOptions.Ler(configuration));
         services.AddSingleton<IEmailSender, SmtpEmailSender>();
+
+        services.AddSingleton(SupabaseOptions.Ler(configuration));
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
