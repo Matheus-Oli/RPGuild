@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
+using RPGuild.Application.Uploads;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
 using RPGuild.Infrastructure.Notificacoes;
@@ -77,7 +78,11 @@ public static class DependencyInjection
         services.AddSingleton(EmailOptions.Ler(configuration));
         services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
-        services.AddSingleton(SupabaseOptions.Ler(configuration));
+        var supabase = SupabaseOptions.Ler(configuration);
+        services.AddSingleton(supabase);
+        services.AddHttpClient<IStorageService, SupabaseStorageService>(http => SupabaseStorageService.Configurar(http, supabase))
+            // A secret key vai num header: nada de header no log, nem em Trace.
+            .RedactLoggedHeaders(_ => true);
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
