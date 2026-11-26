@@ -86,7 +86,7 @@ public sealed class AuthService(
         }
 
         // Quem pediu o reset pode estar tirando um invasor da conta: todas as sessões caem.
-        await refreshTokens.RevogarTodosDoUsuarioAsync(token.UserId, cancellationToken);
+        await refreshTokens.RevogarOutrasSessoesAsync(token.UserId, sessaoAtual: null, cancellationToken);
         return Vazio.Valor;
     }
 

@@ -66,21 +66,8 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
     }
 
     /// <summary>
-    /// Derruba todas as sessões do usuário (ex.: depois de redefinir a senha).
-    /// </summary>
-    public async Task RevogarTodosDoUsuarioAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        var agora = relogio.GetUtcNow();
-        foreach (var token in await repositorio.ListarNaoRevogadosDoUsuarioAsync(userId, cancellationToken))
-        {
-            token.Revogar(agora);
-        }
-
-        await repositorio.SalvarAlteracoesAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Derruba as sessões do usuário menos a atual (família = claim "sid"). Sem sessão atual, derruba todas.
+    /// Derruba as sessões do usuário menos a atual (família = claim "sid"). Sem sessão atual, derruba todas
+    /// (ex.: reset de senha ou confirmação de e-mail sem Bearer). Usado em toda troca de credencial.
     /// </summary>
     public async Task RevogarOutrasSessoesAsync(Guid userId, Guid? sessaoAtual, CancellationToken cancellationToken)
     {
