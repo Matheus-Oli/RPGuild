@@ -8,13 +8,23 @@ namespace RPGuild.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/me")]
-public sealed class MeController(IAuthService auth) : ControllerBase
+public sealed class MeController(IAuthService auth, IPerfilService perfil) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<PerfilResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(CancellationToken cancellationToken)
     {
         var resultado = await auth.ObterPerfilAsync(User.Id(), cancellationToken);
+        return this.ParaResposta(resultado, Ok);
+    }
+
+    [HttpPut]
+    [ProducesResponseType<PerfilResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Put(AtualizarPerfilRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await perfil.AtualizarAsync(User.Id(), request, cancellationToken);
         return this.ParaResposta(resultado, Ok);
     }
 }

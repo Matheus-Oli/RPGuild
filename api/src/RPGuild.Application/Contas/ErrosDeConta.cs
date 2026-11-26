@@ -22,6 +22,9 @@ public static class ErrosDeConta
     public static readonly Erro TokenDeRedefinicaoInvalido = new(
         TipoErro.Validacao, "Token inválido", "O link de redefinição é inválido, já foi usado ou expirou. Peça um novo.");
 
+    public static readonly Erro AvatarForaDaPasta = new(
+        TipoErro.Validacao, "Avatar inválido", "O avatar precisa ser um arquivo enviado por você pelo upload de avatar.");
+
     public static readonly Erro SessaoInvalida = new(
         TipoErro.NaoAutorizado, "Sessão inválida", "Sua sessão expirou ou não é válida. Entre novamente.");
 }

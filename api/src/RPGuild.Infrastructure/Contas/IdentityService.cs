@@ -107,6 +107,46 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return resultado.Succeeded;
     }
 
+    public async Task<Resultado<PerfilAtualizado>> AtualizarPerfilAsync(
+        Guid userId, string nome, Nick nick, string? avatarPath, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(userId.ToString());
+        if (usuario is null)
+        {
+            return ErrosDeConta.SessaoInvalida;
+        }
+
+        if (await userManager.Users.AnyAsync(u => u.Id != userId && u.NickNormalizado == nick.Normalizado, cancellationToken))
+        {
+            return ErrosDeConta.NickEmUso;
+        }
+
+        var anterior = usuario.AvatarPath;
+        usuario.Nome = nome;
+        usuario.Nick = nick.Valor;
+        usuario.NickNormalizado = nick.Normalizado;
+        usuario.AvatarPath = avatarPath;
+
+        IdentityResult resultado;
+        try
+        {
+            resultado = await userManager.UpdateAsync(usuario);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: IndiceNick })
+        {
+            // Outro usuário pegou o nick entre a consulta e o update.
+            return ErrosDeConta.NickEmUso;
+        }
+
+        if (!resultado.Succeeded)
+        {
+            throw new InvalidOperationException(string.Join("; ", resultado.Errors.Select(e => e.Code)));
+        }
+
+        var perfil = new PerfilResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!, usuario.AvatarPath);
+        return new PerfilAtualizado(perfil, anterior);
+    }
+
     public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)

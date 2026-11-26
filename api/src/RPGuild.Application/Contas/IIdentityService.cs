@@ -16,6 +16,12 @@ public interface IIdentityService
     Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Troca nome, nick e avatar. Erros: nick em uso por outro usuário, ou usuário que não existe mais.
+    /// </summary>
+    Task<Resultado<PerfilAtualizado>> AtualizarPerfilAsync(
+        Guid userId, string nome, Nick nick, string? avatarPath, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gera o token de redefinição de senha do usuário com este e-mail, ou null se não houver conta.
     /// </summary>
     Task<DadosDeRedefinicao?> GerarTokenDeRedefinicaoAsync(string email, CancellationToken cancellationToken);
