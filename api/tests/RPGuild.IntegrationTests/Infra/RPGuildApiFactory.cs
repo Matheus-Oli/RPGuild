@@ -15,11 +15,13 @@ namespace RPGuild.IntegrationTests.Infra;
 /// <param name="validadeDoTokenDeRedefinicao">
 /// Troca a validade do token de redefinição. O provider de token do Identity usa o relógio real, não o <see cref="TimeProvider"/>.
 /// </param>
+/// <param name="configurarServicos">Ajuste extra nos serviços da API (ex.: um interceptor do EF que simula erro do banco).</param>
 public sealed class RPGuildApiFactory(
     string connectionString,
     TimeProvider? relogio = null,
     IEmailSender? emailSender = null,
-    TimeSpan? validadeDoTokenDeRedefinicao = null)
+    TimeSpan? validadeDoTokenDeRedefinicao = null,
+    Action<IServiceCollection>? configurarServicos = null)
     : WebApplicationFactory<Program>
 {
     public const string FrontBaseUrl = "http://localhost:5173";
@@ -35,8 +37,9 @@ public sealed class RPGuildApiFactory(
         PostgresFixture postgres,
         TimeProvider? relogio = null,
         IEmailSender? emailSender = null,
-        TimeSpan? validadeDoTokenDeRedefinicao = null)
-        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao)
+        TimeSpan? validadeDoTokenDeRedefinicao = null,
+        Action<IServiceCollection>? configurarServicos = null)
+        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao, configurarServicos)
     {
     }
 
@@ -75,6 +78,8 @@ public sealed class RPGuildApiFactory(
             {
                 services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = validade);
             }
+
+            configurarServicos?.Invoke(services);
         });
     }
 
