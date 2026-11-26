@@ -7,8 +7,12 @@ namespace RPGuild.Infrastructure.Persistence.Configurations;
 
 public sealed class AmizadeConfiguration : IEntityTypeConfiguration<Amizade>
 {
-    // O índice único do par ordenado (ix_friendships_par, sobre LEAST/GREATEST dos ids) é de expressão
-    // e fica só na migration AddFriendships: o EF não modela esse tipo de índice.
+    /// <summary>
+    /// Índice único do par ordenado (LEAST/GREATEST dos ids). É de expressão e fica só na migration AddFriendships:
+    /// o EF não modela esse tipo de índice.
+    /// </summary>
+    public const string IndicePar = "ix_friendships_par";
+
     public void Configure(EntityTypeBuilder<Amizade> builder)
     {
         builder.ToTable("friendships");

@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using RPGuild.Application.Taberna;
 using RPGuild.Domain.Taberna;
 using RPGuild.Infrastructure.Persistence;
+using RPGuild.Infrastructure.Persistence.Configurations;
 
 namespace RPGuild.Infrastructure.Taberna;
 
@@ -38,5 +40,19 @@ public sealed class AmizadeRepository(AppDbContext db) : IAmizadeRepository
 
     public void Remover(Amizade amizade) => db.Amizades.Remove(amizade);
 
-    public Task SalvarAlteracoesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
+    public async Task SalvarAlteracoesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: AmizadeConfiguration.IndicePar,
+        })
+        {
+            throw new ParDeAmizadeJaExisteException(ex);
+        }
+    }
 }

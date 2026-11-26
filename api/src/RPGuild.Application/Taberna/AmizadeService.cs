@@ -56,7 +56,16 @@ public sealed class AmizadeService(
                 break;
         }
 
-        await amizades.SalvarAlteracoesAsync(cancellationToken);
+        try
+        {
+            await amizades.SalvarAlteracoesAsync(cancellationToken);
+        }
+        catch (ParDeAmizadeJaExisteException)
+        {
+            // Os dois pediram ao mesmo tempo e o outro pedido entrou antes: é o mesmo caso do pedido cruzado.
+            return ErrosDaTaberna.PedidoRecebidoPendente;
+        }
+
         await AvisarDestinatarioAsync(userId, destinatario, cancellationToken);
 
         return new PedidoEnviadoResponse(pedido.Id, Usuario(destinatario), pedido.CreatedAt);
