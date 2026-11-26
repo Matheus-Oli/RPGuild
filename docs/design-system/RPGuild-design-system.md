@@ -2,7 +2,7 @@
 
 O RPGuild tem cara de taverna medieval vista à noite: madeira escura, texto cor de pergaminho e dourado nos pontos que importam. É só tema escuro. Os títulos usam uma fonte de inscrição decorada (Cinzel Decorative) e todo o resto usa uma serifa clássica de livro (EB Garamond), para o site inteiro ter cara de livro de fantasia sem perder a leitura.
 
-Esta é a **primeira versão**. Tem a logo (escudo com d20 dourado), as fundações (cores, tipografia, espaçamento, raios) e os dez símbolos das faces do dado. Os componentes vêm do PrimeNG, ajustados com estes tokens.
+Esta é a **primeira versão**. Tem a logo (escudo com d20 dourado), as fundações (cores, tipografia, espaçamento, raios) e os dez símbolos das faces do dado. Os componentes vêm do shadcn/ui (Tailwind), ajustados com estes tokens; os efeitos animados vêm do React Bits.
 
 ## Princípios
 
@@ -58,17 +58,21 @@ Todos os textos passam de 4.5:1 sobre as três superfícies (o menor é `ember-4
 - **Tamanho mínimo:** 32px de altura para o dado e 64px para a logo completa. Abaixo disso os símbolos das faces viram ruído.
 - **Fundo:** sempre sobre `bg-900` ou `surface-800`. Não aplicar sobre fotos nem sobre `gold-500`.
 - **Símbolos** (`assets/Simbolos`): os dez desenhos das faces (espadas cruzadas, escudo, elmo, chama, dragão, poção, machados cruzados, estrela arcana, lua crescente, coroa). São ilustrações, não ícones de interface: use em empty states, cards de campanha, conquistas e na home, a partir de 48px.
-- **Ícones de interface:** **PrimeIcons** (vêm com o PrimeNG), em `ink-muted` quando inativos e `ink` ou `gold-500` quando ativos.
+- **Ícones de interface:** **Lucide** (`lucide-react`, padrão do shadcn/ui), em `ink-muted` quando inativos e `ink` ou `gold-500` quando ativos.
 - **Formato dos arquivos:** os arquivos chegaram como `.svg`, mas cada um contém uma imagem PNG embutida, sem vetor de verdade. Aqui eles estão como PNG. Para escalar sem perder qualidade (favicon nítido, impressão, animação), a logo precisa ser vetorizada de verdade.
 
-## Usando com PrimeNG (Angular)
+## Usando com Tailwind + shadcn/ui (React)
 
-- Use o tema **Aura** como base e crie um preset próprio, com `definePreset`, mapeando:
-  - `primary` → escala gerada a partir de `gold-500`;
-  - `surface` → `bg-900`, `surface-800`, `surface-700` e `border-600`;
-  - `danger` → `ember-400`, `success` → `moss-400`, `info` → `arcane-300`.
-- Ative só o modo escuro (`darkModeSelector` sempre ligado). Não existe tema claro.
-- Defina os tokens também como CSS variables (`--gold-500`, `--space-4` …) num `styles.scss` global, para os componentes próprios (ficha, painel de rolagens, agenda) usarem os mesmos valores.
+- Tailwind v4: declare os tokens no `@theme` do CSS global (`--color-gold-500`, `--color-surface-800`, `--spacing-4`, `--radius-md` …) para virarem classes (`bg-surface-800`, `text-gold-500`).
+- shadcn/ui: mapeie as variáveis do tema para os tokens:
+  - `--background` → `bg-900`; `--card` e `--popover` → `surface-800`; `--muted` e `--secondary` → `surface-700`;
+  - `--border` e `--input` → `border-600`; `--ring` → `gold-500`;
+  - `--primary` → `gold-500` com `--primary-foreground` → `bg-900` (ink-on-gold);
+  - `--foreground` → `ink`; `--muted-foreground` → `ink-muted`;
+  - `--destructive` → `ember-400`; sucesso → `moss-400`; info → `arcane-300`.
+- Só modo escuro: deixe a classe `dark` fixa no `<html>`. Não existe tema claro.
+- React Bits: instale pelo CLI do shadcn na variante **TS + Tailwind** (`npx shadcn@latest add @react-bits/<Componente>-TS-TW`) e troque as cores fixas dos componentes pelos tokens. Só a versão gratuita (Pro é paga).
+- Componentes próprios (ficha, painel de rolagens, agenda) usam as mesmas classes e variáveis.
 
 ## Próximos passos deste sistema
 
