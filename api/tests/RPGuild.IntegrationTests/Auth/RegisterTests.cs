@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Npgsql;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Auth;
@@ -83,5 +84,27 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
         using var corpo = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
         var campos = corpo.RootElement.GetProperty("errors").EnumerateObject().Select(p => p.Name);
         campos.ShouldBe(["nome", "nick", "email", "senha"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task Register_DadosValidos_GravaSomenteOHashDaSenha()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var usuario = NovoUsuario.Gerar();
+
+        // Act
+        (await cliente.PostAsJsonAsync(Url, usuario)).EnsureSuccessStatusCode();
+
+        // Assert
+        await using var conexao = new NpgsqlConnection(postgres.ConnectionString);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand("SELECT password_hash FROM users WHERE email = @email", conexao);
+        comando.Parameters.AddWithValue("email", usuario.Email);
+        var hash = (string?)await comando.ExecuteScalarAsync();
+
+        hash.ShouldNotBeNullOrWhiteSpace();
+        hash.ShouldNotContain(usuario.Senha);
+        Convert.FromBase64String(hash)[0].ShouldBe((byte)0x01); // formato v3 do PasswordHasher (PBKDF2)
     }
 }
