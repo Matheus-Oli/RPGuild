@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using RPGuild.Application.Notificacoes;
 
 namespace RPGuild.IntegrationTests.Infra;
 
@@ -26,11 +27,22 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
         builder.UseSetting("Jwt:Audience", "rpguild-web");
         builder.UseSetting("Cors:Origins:0", "http://localhost:5173");
 
-        if (relogio is not null)
+        builder.ConfigureTestServices(services =>
         {
-            builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton(relogio)));
-        }
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Emails);
+
+            if (relogio is not null)
+            {
+                services.Replace(ServiceDescriptor.Singleton(relogio));
+            }
+        });
     }
+
+    /// <summary>
+    /// E-mails "enviados" pela API desta factory.
+    /// </summary>
+    public FakeEmailSender Emails { get; } = new();
 
     /// <summary>
     /// Cliente em https, sem cookie automático: os testes mandam o cookie de refresh explicitamente.

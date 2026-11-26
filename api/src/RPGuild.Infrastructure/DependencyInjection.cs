@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -32,6 +33,11 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
 
         services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));
+
+        // Chaves no banco: os tokens (ex.: redefinição de senha) continuam válidos entre reinícios e deploys.
+        services.AddDataProtection()
+            .PersistKeysToDbContext<AppDbContext>()
+            .SetApplicationName("RPGuild");
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {
