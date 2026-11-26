@@ -34,4 +34,17 @@ public sealed class MeTests(PostgresFixture postgres) : IDisposable
         perfil.Email.ShouldBe(logado.Dados.Email);
         perfil.AvatarPath.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task GetMe_SemToken_Retorna401()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+
+        // Act
+        var resposta = await cliente.GetAsync(Url);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
 }
