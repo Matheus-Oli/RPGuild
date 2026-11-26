@@ -8,5 +8,24 @@ public static class CaminhoDeAvatar
     private const string Pasta = "avatars";
 
     public static string Gerar(Guid userId, string contentType) =>
-        $"{Pasta}/{userId}/{Guid.NewGuid()}.{TiposDeImagem.Extensao(contentType)}";
+        $"{Prefixo(userId)}{Guid.NewGuid()}.{TiposDeImagem.Extensao(contentType)}";
+
+    /// <summary>
+    /// Se o path está dentro da pasta do próprio usuário, sem "..", "." ou segmentos vazios que escapem dela.
+    /// </summary>
+    public static bool PertenceAo(Guid userId, string? path)
+    {
+        var prefixo = Prefixo(userId);
+        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith(prefixo, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var resto = path[prefixo.Length..];
+        return resto.Length > 0
+            && !resto.Contains('\\')
+            && resto.Split('/').All(segmento => segmento is not ("" or "." or ".."));
+    }
+
+    private static string Prefixo(Guid userId) => $"{Pasta}/{userId}/";
 }
