@@ -70,6 +70,8 @@ public static class DependencyInjection
                     IssuerSigningKey = JwtTokenService.ChaveDeAssinatura(jwt),
                     ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                     NameClaimType = JwtRegisteredClaimNames.Name,
+                    // O padrão aceita 5 min além da validade; o access token já é curto e o refresh cobre a renovação.
+                    ClockSkew = TimeSpan.Zero,
                 };
             });
 
