@@ -94,4 +94,18 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
 
         return new UsuarioLogado(usuario, token.AccessToken, RefreshCookie.Extrair(login)!);
     }
+
+    /// <summary>
+    /// Cadastra um usuário, pede a redefinição de senha e devolve o token opaco que veio no e-mail.
+    /// </summary>
+    public async Task<(NovoUsuario Usuario, string Token)> PedirRedefinicaoAsync(NovoUsuario? dados = null)
+    {
+        var (usuario, _) = await RegistrarUsuarioAsync(dados);
+        using var cliente = CriarCliente();
+
+        var pedido = await cliente.PostAsJsonAsync("/api/auth/forgot-password", new { usuario.Email });
+        pedido.EnsureSuccessStatusCode();
+
+        return (usuario, LinkDeRedefinicao.Token(Emails.UltimaPara(usuario.Email)!));
+    }
 }
