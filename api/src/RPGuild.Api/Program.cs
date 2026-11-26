@@ -3,6 +3,7 @@ using Microsoft.OpenApi;
 using RPGuild.Api.Configuracao;
 using RPGuild.Api.Http;
 using RPGuild.Application;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Infrastructure;
 using RPGuild.Infrastructure.Notificacoes;
 
@@ -76,10 +77,16 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Painel do Hangfire só em Development (e, pelo padrão do Hangfire, só para requisições locais).
-if (hangfireHabilitado && app.Environment.IsDevelopment())
+if (hangfireHabilitado)
 {
-    app.MapHangfireDashboard("/hangfire");
+    app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<LimpezaDeNotificacoes>(
+        LimpezaDeNotificacoes.IdDoJob, job => job.ExecutarAsync(CancellationToken.None), Cron.Daily());
+
+    // Painel do Hangfire só em Development (e, pelo padrão do Hangfire, só para requisições locais).
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapHangfireDashboard("/hangfire");
+    }
 }
 
 app.Run();

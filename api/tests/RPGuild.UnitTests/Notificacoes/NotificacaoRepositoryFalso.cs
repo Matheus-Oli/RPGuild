@@ -35,6 +35,12 @@ public sealed class NotificacaoRepositoryFalso : INotificacaoRepository
 
     public void Remover(Notificacao notificacao) => Notificacoes.Remove(notificacao);
 
+    public Task ApagarCriadasAntesDeAsync(DateTimeOffset limite, CancellationToken cancellationToken)
+    {
+        Notificacoes.RemoveAll(n => n.CreatedAt < limite);
+        return Task.CompletedTask;
+    }
+
     public Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken)
     {
         Notificacoes.Add(notificacao);

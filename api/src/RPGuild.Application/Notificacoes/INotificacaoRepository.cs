@@ -21,6 +21,11 @@ public interface INotificacaoRepository
 
     void Remover(Notificacao notificacao);
 
+    /// <summary>
+    /// Apaga, de todos os usuários, as criadas antes do instante.
+    /// </summary>
+    Task ApagarCriadasAntesDeAsync(DateTimeOffset limite, CancellationToken cancellationToken);
+
     Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken);
 
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);

@@ -43,6 +43,9 @@ public sealed class NotificacaoRepository(AppDbContext db) : INotificacaoReposit
 
     public void Remover(Notificacao notificacao) => db.Notificacoes.Remove(notificacao);
 
+    public Task ApagarCriadasAntesDeAsync(DateTimeOffset limite, CancellationToken cancellationToken) =>
+        db.Notificacoes.Where(n => n.CreatedAt < limite).ExecuteDeleteAsync(cancellationToken);
+
     public async Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken) =>
         await db.Notificacoes.AddAsync(notificacao, cancellationToken);
 
