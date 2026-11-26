@@ -13,6 +13,8 @@ namespace RPGuild.IntegrationTests.Infra;
 public sealed class RPGuildApiFactory(string connectionString, TimeProvider? relogio = null, IEmailSender? emailSender = null)
     : WebApplicationFactory<Program>
 {
+    public const string FrontBaseUrl = "http://localhost:5173";
+
     public const string JwtKey = "testes-rpguild-chave-hs256-com-pelo-menos-32-bytes-0123456789";
 
     public RPGuildApiFactory(PostgresFixture postgres, TimeProvider? relogio = null, IEmailSender? emailSender = null)
@@ -28,6 +30,7 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
         builder.UseSetting("Jwt:Issuer", "rpguild-api");
         builder.UseSetting("Jwt:Audience", "rpguild-web");
         builder.UseSetting("Cors:Origins:0", "http://localhost:5173");
+        builder.UseSetting("Front:BaseUrl", FrontBaseUrl);
         // Só para a configuração passar na validação: o envio de verdade é trocado pelo FakeEmailSender.
         builder.UseSetting("Email:Usuario", "testes@rpguild.invalid");
         builder.UseSetting("Email:Senha", "nao-usada");
