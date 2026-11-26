@@ -10,8 +10,7 @@ public sealed class AmizadeService(
     IAmizadeRepository amizades,
     IIdentityService identity,
     IStorageService storage,
-    EnvioDeEmail emails,
-    FrontOptions front,
+    INotificador notificador,
     TimeProvider relogio)
 {
     /// <summary>
@@ -66,7 +65,7 @@ public sealed class AmizadeService(
             return ErrosDaTaberna.PedidoRecebidoPendente;
         }
 
-        await AvisarDestinatarioAsync(userId, destinatario, cancellationToken);
+        await AvisarDestinatarioAsync(userId, pedido.Id, destinatario.Id, cancellationToken);
 
         return new PedidoEnviadoResponse(pedido.Id, Usuario(destinatario), pedido.CreatedAt);
     }
@@ -161,8 +160,8 @@ public sealed class AmizadeService(
         return Vazio.Valor;
     }
 
-    // Aviso nº 5 (sininho + e-mail): por enquanto só o e-mail. O sininho entra no módulo de Notificações.
-    private async Task AvisarDestinatarioAsync(Guid userId, DadosDoPerfil destinatario, CancellationToken cancellationToken)
+    // Aviso nº 5 (sininho + e-mail), com o nome e o nick de quem pediu como estão agora.
+    private async Task AvisarDestinatarioAsync(Guid userId, Guid pedidoId, Guid destinatarioId, CancellationToken cancellationToken)
     {
         var remetente = await identity.BuscarPerfilAsync(userId, cancellationToken);
         if (remetente is null)
@@ -170,10 +169,8 @@ public sealed class AmizadeService(
             return;
         }
 
-        var link = $"{front.BaseUrl.TrimEnd('/')}/taberna";
-        await emails.EnviarAsync(
-            EmailTemplates.PedidoDeAmizade(destinatario.Nome, destinatario.Email, remetente.Nome, remetente.Nick, link),
-            cancellationToken);
+        await notificador.NotificarAsync(
+            destinatarioId, new AmizadeRecebida(pedidoId, userId, remetente.Nome, remetente.Nick), cancellationToken);
     }
 
     private UsuarioDaTaberna Usuario(DadosDoPerfil perfil) => Usuario(perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath);
