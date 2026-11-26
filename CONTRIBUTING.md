@@ -41,6 +41,11 @@ SemVer (`MAJOR.MINOR.PATCH`), com tag em `main` a cada release (`v1.0.0`).
 - Nome dos testes: `Metodo_Cenario_ResultadoEsperado` (ex.: `Rolar_JogadorComVisibilidadeOculta_LancaExcecao`). Classe: `<ClasseTestada>Tests`.
 - Estrutura Arrange / Act / Assert, com Shouldly nas asserções e NSubstitute para mocks.
 - Commits do ciclo: `test(<modulo>): ...` no red, `feat(<modulo>): ...` no green, `refactor(<modulo>): ...` no refactor.
+- Durante o ciclo red/green, rode só os testes afetados:
+  - `dotnet test api/RPGuild.sln --filter "FullyQualifiedName~<ClasseDeTeste>"`
+  - Unitários: `dotnet test api/tests/RPGuild.UnitTests`, que roda sem Docker.
+- A suíte inteira (`dotnet test api/RPGuild.sln`) roda ao fim de cada ciclo e antes do push.
+- O container de testes (`rpguild-tests-db`) é reaproveitado em dev: ele fica rodando entre as execuções, numa porta aleatória, e os dados são limpos (Respawn) ao subir a suíte. Não precisa de flag do Testcontainers. Em CI (`CI=true`) o container é sempre novo e removido no fim. Para recriar: `docker rm -f rpguild-tests-db`.
 
 ## PRs por módulo
 

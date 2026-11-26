@@ -57,6 +57,18 @@ dotnet run --project src/RPGuild.Api
 
 Os warnings são tratados como erro, então o build só passa limpo.
 
+### Testes
+
+```bash
+dotnet test RPGuild.sln                                              # suíte inteira (precisa do Docker)
+dotnet test RPGuild.sln --filter "FullyQualifiedName~<ClasseDeTeste>"  # só uma classe, no ciclo de TDD
+dotnet test tests/RPGuild.UnitTests                                  # só os unitários, sem Docker
+```
+
+- Os testes de integração usam o container `rpguild-tests-db` (Testcontainers), reaproveitado entre execuções em dev, numa porta aleatória que não conflita com o Postgres do compose na 5432. Ao subir, a suíte aplica as migrations pendentes e limpa os dados com Respawn.
+- Com `CI=true` o container é sempre novo e removido no fim.
+- Para recriar o container: `docker rm -f rpguild-tests-db`.
+
 ## Banco local
 
 PostgreSQL 17 pelo `docker-compose.yml` da raiz do monorepo (precisa do Docker rodando). Os comandos abaixo rodam da raiz.
