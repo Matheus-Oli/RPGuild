@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using RPGuild.Application.Contas;
+using RPGuild.Application.Notificacoes;
 
 namespace RPGuild.Application;
 
@@ -10,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<RefreshTokenService>();
+        services.AddScoped<EnvioDeEmail>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
