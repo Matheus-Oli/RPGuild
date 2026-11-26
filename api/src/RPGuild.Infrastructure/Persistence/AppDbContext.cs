@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using RPGuild.Domain.Campanhas;
 using RPGuild.Domain.Contas;
 using RPGuild.Domain.Notificacoes;
 using RPGuild.Domain.Taberna;
@@ -15,6 +16,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
     public DbSet<Amizade> Amizades => Set<Amizade>();
 
     public DbSet<Notificacao> Notificacoes => Set<Notificacao>();
+
+    public DbSet<SistemaDeJogo> SistemasDeJogo => Set<SistemaDeJogo>();
+
+    public DbSet<Campanha> Campanhas => Set<Campanha>();
+
+    public DbSet<MembroDaCampanha> MembrosDeCampanha => Set<MembroDaCampanha>();
+
+    public DbSet<PosicaoNaGrade> OrdemDasCampanhas => Set<PosicaoNaGrade>();
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
