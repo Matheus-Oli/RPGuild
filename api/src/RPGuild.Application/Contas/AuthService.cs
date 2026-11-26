@@ -1,13 +1,25 @@
 using RPGuild.Application.Comum;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Domain.Contas;
 
 namespace RPGuild.Application.Contas;
 
-public sealed class AuthService(IIdentityService identity, ITokenService tokens, RefreshTokenService refreshTokens) : IAuthService
+public sealed class AuthService(
+    IIdentityService identity, ITokenService tokens, RefreshTokenService refreshTokens, IEmailSender emails) : IAuthService
 {
-    public Task<Resultado<UsuarioResponse>> RegistrarAsync(RegistrarRequest request, CancellationToken cancellationToken) =>
-        identity.CriarUsuarioAsync(
+    public async Task<Resultado<UsuarioResponse>> RegistrarAsync(RegistrarRequest request, CancellationToken cancellationToken)
+    {
+        var criado = await identity.CriarUsuarioAsync(
             request.Nome.Trim(), Nick.Criar(request.Nick), request.Email.Trim(), request.Senha, cancellationToken);
+
+        if (criado.Sucesso)
+        {
+            var usuario = criado.Valor!;
+            await emails.EnviarAsync(EmailTemplates.BoasVindas(usuario.Nome, usuario.Email), cancellationToken);
+        }
+
+        return criado;
+    }
 
     public async Task<Resultado<SessaoAutenticada>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
