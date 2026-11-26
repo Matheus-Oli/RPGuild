@@ -113,13 +113,15 @@ ASP.NET Identity (sem roles) para usuários e senhas, JWT para o access token e 
 | `POST /api/auth/logout` | cookie | 204, revoga o refresh e apaga o cookie |
 | `POST /api/auth/forgot-password` | `{email}` | 204 e manda o link por e-mail · 404 se o e-mail não tem conta |
 | `POST /api/auth/reset-password` | `{token, novaSenha}` | 204 · 400 se o token for inválido, usado ou vencido, ou se a senha não seguir a política |
-| `GET /api/me` | `Authorization: Bearer <token>` | 200 `{id, nome, nick, email, avatarPath}` |
+
+Os endpoints do próprio usuário (`/api/me`) estão em [Perfil](#perfil).
 
 Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) ou token de redefinição inválido · 401 credencial ou sessão inválida (mensagem genérica, sem dizer se foi o e-mail ou a senha) · 404 e-mail não cadastrado (forgot-password) · 409 e-mail ou nick em uso · 423 conta bloqueada.
 
 **Fluxo**
 
-1. **Access token** (JWT HS256, 15 min, claims `sub`, `email`, `nick`, `name`): vai no corpo do login/refresh e o front manda no header `Authorization: Bearer`. Validade conferida sem tolerância de relógio.
+1. **Access token** (JWT HS256, 15 min, claims `sub`, `email`, `nick`, `name` e `sid`): vai no corpo do login/refresh e o front manda no header `Authorization: Bearer`. Validade conferida sem tolerância de relógio.
+   - `sid` é a **sessão**: o `family_id` do refresh token. O login cria a família e o refresh mantém o mesmo `sid`. É com ele que a troca de senha e a confirmação de e-mail derrubam "as outras sessões" e mantêm a atual.
 2. **Refresh token** (64 bytes aleatórios, 14 dias): vai **só** no cookie `rpguild_refresh` (`HttpOnly`, `Secure`, `SameSite=None`, `Path=/api/auth`), nunca no corpo. No banco (`refresh_tokens`) fica só o hash SHA-256.
 3. **Rotação:** cada `refresh` revoga o token usado (`revoked_at`, `replaced_by_id`) e emite outro na mesma família (`family_id`). Cada login começa uma família nova.
 4. **Reuso:** se chegar um refresh já revogado, alguém pode ter copiado o cookie. A família inteira é revogada e a resposta é 401: os dois lados precisam entrar de novo.
@@ -131,7 +133,7 @@ Erros em ProblemDetails: 400 validação (`errors` por campo, em camelCase) ou t
 1. `forgot-password` com um e-mail que **não** tem conta responde 404. Com conta, responde 204 e manda o e-mail com o link `{Front:BaseUrl}/redefinir-senha?token=<token>`. O e-mail não vai na URL.
 2. O token é opaco: `Base64Url("{userId}:{token do Identity}")`, gerado por `GeneratePasswordResetTokenAsync`. Ele vale **1 hora** (`DataProtectionTokenProviderOptions.TokenLifespan`).
 3. **Uso único:** o reset troca o security stamp do usuário, e o token usado (e qualquer outro emitido antes dele) deixa de valer.
-4. Depois do reset, **todas as sessões caem**: todos os refresh tokens do usuário são revogados e é preciso entrar de novo. O lockout não muda.
+4. Depois do reset, **todas as sessões caem**: todos os refresh tokens do usuário são revogados e é preciso entrar de novo. O lockout não muda. A revogação é a mesma da troca de senha e de e-mail (`RefreshTokenService.RevogarOutrasSessoesAsync`), aqui sem sessão atual.
 5. As chaves do Data Protection, que assinam o token, ficam no Postgres (`data_protection_keys`, app `RPGuild`). Assim o link continua valendo depois de reiniciar a API.
 
 No front, as chamadas a `/api/auth/*` precisam de `credentials: "include"` para o navegador mandar e receber o cookie.
@@ -146,11 +148,81 @@ No front, as chamadas a `/api/auth/*` precisam de `credentials: "include"` para 
 | `Cors:Origins` | Origens do front (com `AllowCredentials`) | `http://localhost:5173` | `Cors__Origins__0`, `Cors__Origins__1`... |
 | `Front:BaseUrl` | Base dos links nos e-mails (obrigatória; sem ela a API não sobe) | `http://localhost:5173` | `Front__BaseUrl` |
 
-Nos testes, a `RPGuildApiFactory` define uma chave própria e aceita um `TimeProvider` (por exemplo `FakeTimeProvider`) para controlar o relógio. O helper `CriarUsuarioELogarAsync()` devolve o access token e o cookie de refresh. O `PedirRedefinicaoAsync()` devolve o token de redefinição que veio no e-mail.
+Nos testes, a `RPGuildApiFactory` define uma chave própria e aceita um `TimeProvider` (por exemplo `FakeTimeProvider`) para controlar o relógio. O helper `CriarUsuarioELogarAsync()` devolve o access token e o cookie de refresh; `LogarAsync(usuario)` abre outra sessão do mesmo usuário e `SessaoContinuaAsync(cookie)` diz se uma sessão ainda renova. O `PedirRedefinicaoAsync()` devolve o token de redefinição que veio no e-mail, e o `PedirTrocaDeEmailAsync(logado)`, o token de troca de e-mail.
+
+## Perfil
+
+Endpoints do usuário logado. Todos exigem `Authorization: Bearer`, menos o `confirm`, que é anônimo porque o link chega por e-mail.
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `GET /api/me` | — | 200 `{id, nome, nick, email, avatarPath, avatarUrl}` |
+| `PUT /api/me` | `{nome, nick, avatarPath?}` | 200 com o perfil · 400 avatar fora da pasta do usuário · 409 nick em uso |
+| `PUT /api/me/email` | `{novoEmail, senha}` | 202 e manda a confirmação para o novo endereço · 400 senha incorreta ou mesmo e-mail · 409 e-mail em uso |
+| `POST /api/me/email/confirm` | `{token}` (anônimo; Bearer opcional) | 204 · 400 token inválido, usado ou vencido · 409 e-mail tomado depois do pedido |
+| `PUT /api/me/password` | `{atual, nova}` | 204 · 400 senha atual incorreta ou nova fora da política |
+
+**Nome, nick e avatar (`PUT /api/me`)**
+
+1. Nome obrigatório (até 100 caracteres). O nick segue a regra do cadastro e pode ser trocado se estiver livre (único sem diferenciar caixa; trocar só a caixa do próprio nick vale).
+2. `avatarPath` é o `path` devolvido pelo [`POST /api/uploads/sign`](#uploads). Só vale um path dentro da pasta do próprio usuário (`avatars/{userId}/...`, sem `..`, `.`, `\` ou segmentos vazios); senão, 400. `null` remove o avatar.
+3. **Ao trocar ou remover o avatar, o arquivo antigo é apagado do bucket**, depois de salvar o perfil. Se a exclusão falhar, a falha vai para o log (`Warning`, com o path) e a requisição segue com 200; o arquivo fica órfão no bucket.
+4. `avatarUrl` é a URL pública do avatar (bucket público), montada a partir do `avatarPath`; `null` sem avatar.
+
+**Troca de e-mail**
+
+1. `PUT /api/me/email` confere a senha atual, grava o endereço em `users.email_pendente` e manda para o **novo** e-mail o link `{Front:BaseUrl}/confirmar-email?token=<token>`. O e-mail da conta **não muda** ainda; o login continua com o antigo.
+2. O token tem o mesmo formato do de redefinição (`Base64Url("{userId}:{token do Identity}")`, mesmo codec), gerado por `GenerateChangeEmailTokenAsync` para o e-mail pendente. Vale **1 hora** (o mesmo provider do reset). Um pedido novo troca o pendente, e o token do pedido anterior deixa de valer.
+3. `POST /api/me/email/confirm` aplica a troca com `ChangeEmailAsync` (o `UserName` acompanha o e-mail, como no cadastro), limpa o `email_pendente` e troca o security stamp: o token é de uso único.
+4. Depois da troca, o **e-mail antigo** recebe o aviso "e-mail alterado" e as **outras sessões caem**. Se a confirmação vier com Bearer, a sessão do `sid` dele continua; sem Bearer, todas caem.
+
+**Troca de senha**
+
+`PUT /api/me/password` confere a senha atual (400 se errada) e aplica a mesma política do cadastro na nova. No sucesso, as **outras sessões caem** (a do `sid` continua) e o usuário recebe o aviso "senha alterada", que orienta a usar o "Esqueci minha senha" se não foi a própria pessoa que trocou.
+
+## Uploads
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `POST /api/uploads/sign` | `{tipo, contentType}` (Bearer) | 200 `{uploadUrl, path, publicUrl}` · 400 tipo não suportado ou `contentType` fora da lista |
+
+Imagens ficam no Supabase Storage, no bucket público `imagens`. A API não recebe o arquivo: ela gera uma URL assinada e o front sobe direto no Storage.
+
+**Fluxo**
+
+1. O front chama `POST /api/uploads/sign` com o `tipo` e o `contentType` do arquivo. Por enquanto só `tipo = "avatar"`; capa, banner e retrato respondem 400 ("ainda não suportado").
+2. `contentType` permitido: `image/jpeg`, `image/png`, `image/webp`, `image/gif`. A API escolhe o path, `avatars/{userId}/{guid}.{ext}`, com a extensão vinda do `contentType` (`jpg`, `png`, `webp`, `gif`).
+3. A resposta traz a `uploadUrl` (assinada, com `?token=`; o Supabase a deixa valer por 2 horas), o `path` e a `publicUrl`.
+4. O front sobe o arquivo com `PUT` na `uploadUrl`, corpo binário e `Content-Type` do arquivo. Não precisa de chave nem de Bearer: o token da URL autoriza só aquele path.
+5. Com o upload feito, o front manda o `path` em `PUT /api/me` (`avatarPath`). O avatar antigo é apagado do bucket nessa hora.
+
+**Limites:** 5 MB por arquivo e os mesmos tipos de imagem, configurados **no bucket** do Supabase. Como a API não vê o arquivo, quem barra o tamanho é o Storage.
+
+**Implementação:** `IStorageService` (Application) com `CriarUrlDeUploadAsync`, `ObterUrlPublica` e `ApagarAsync`. O `SupabaseStorageService` (Infrastructure) usa a API REST do Storage com `HttpClient`, sem SDK:
+
+| Operação | Requisição |
+| --- | --- |
+| URL assinada de upload | `POST {Url}/storage/v1/object/upload/sign/{bucket}/{path}` → `{url}` relativa a `/storage/v1` |
+| URL pública | `{Url}/storage/v1/object/public/{bucket}/{path}` (sem chamada) |
+| Exclusão | `DELETE {Url}/storage/v1/object/{bucket}` com `{"prefixes": [path]}` |
+
+A chave é do formato novo (`sb_secret_...`), que não é JWT: ela vai **só** no header `apikey`. No `Authorization: Bearer` o Supabase tenta ler como JWT e rejeita. O `HttpClient` tem os headers redigidos no log.
+
+**Configuração**
+
+| Chave | Valor | Dev | Produção |
+| --- | --- | --- | --- |
+| `Supabase:Url` | base do projeto, `https://<projeto>.supabase.co` (sem `/rest/v1` nem `/storage/v1`) | `.env` | `Supabase__Url` |
+| `Supabase:ServiceKey` | secret key do projeto (`sb_secret_...`) | `.env` | `Supabase__ServiceKey` |
+| `Supabase:Bucket` | `imagens` (público) | `.env` | `Supabase__Bucket` |
+
+- Sem `Supabase:Url`, `Supabase:ServiceKey` ou `Supabase:Bucket` (ou com uma `Url` que não é absoluta), a API **não sobe**, e a mensagem diz quais chaves faltam. Vale também para o `dotnet ef`, como no e-mail.
+- A `ServiceKey` **nunca** vai para o front, para o log ou para arquivo versionado. No `.env.example` as chaves ficam vazias.
+- Nos testes, a `RPGuildApiFactory` troca o storage por um `FakeStorageService`, que guarda em memória os paths com URL criada e os apagados (`factory.Storage.Apagados`) e pode simular falha na exclusão (`FalharAoApagar`). O `SupabaseStorageService` não tem teste automatizado; ele é validado manualmente contra o projeto real.
 
 ## E-mail
 
-E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem dois: boas-vindas (depois do register) e redefinição de senha (no forgot-password).
+E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem cinco: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**) e senha alterada (no `PUT /api/me/password`).
 
 **Senha de app do Gmail**
 
@@ -173,7 +245,7 @@ Em dev, as credenciais ficam no `.env` da raiz do monorepo, que está no `.gitig
 **Comportamento**
 
 - Sem `Email:Host`, `Email:Port`, `Email:Usuario`, `Email:Senha` ou `Email:RemetenteEmail`, a API **não sobe**, e a mensagem diz quais chaves faltam. Isso também vale para os comandos `dotnet ef`, que sobem a API em Development: o `.env` precisa estar preenchido.
-- Se o envio falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (201 no register, 204 no forgot-password). A falha vai para o log (`ILogger`) com o assunto e o destinatário mascarado (`ma***@gmail.com`; com 2 caracteres ou menos antes do `@`, `***@gmail.com`), sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`, o ponto único de envio dos casos de uso. Ainda não há reenvio; está anotado `TODO(hangfire)` para mover o envio para uma fila.
+- Se o envio falhar (SMTP fora, senha errada...), a requisição **segue normalmente** (201 no register, 204 no forgot-password, e assim por diante). A falha vai para o log (`ILogger`) com o assunto e o destinatário mascarado (`ma***@gmail.com`; com 2 caracteres ou menos antes do `@`, `***@gmail.com`), sem o corpo, o token ou a senha. Isso fica em `EnvioDeEmail`, o ponto único de envio dos casos de uso. Ainda não há reenvio; está anotado `TODO(hangfire)` para mover o envio para uma fila.
 - Nos testes, a `RPGuildApiFactory` troca o SMTP por um `FakeEmailSender`, que guarda as mensagens em memória (`factory.Emails.UltimaPara(email)`). O `SmtpEmailSender` não tem teste automatizado; ele é validado manualmente com o Gmail.
 
 ## Testes
