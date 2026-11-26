@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using RPGuild.Domain.Taberna;
+using RPGuild.Infrastructure.Persistence.Configurations;
 
 namespace RPGuild.IntegrationTests.Infra;
 
@@ -11,8 +12,6 @@ namespace RPGuild.IntegrationTests.Infra;
 /// </summary>
 public sealed class ParDeAmizadeDuplicadoNoBanco : SaveChangesInterceptor
 {
-    public const string IndicePar = "ix_friendships_par";
-
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
@@ -20,12 +19,12 @@ public sealed class ParDeAmizadeDuplicadoNoBanco : SaveChangesInterceptor
         if (temPedidoNovo)
         {
             var violacao = new PostgresException(
-                messageText: $"duplicate key value violates unique constraint \"{IndicePar}\"",
+                messageText: $"duplicate key value violates unique constraint \"{AmizadeConfiguration.IndicePar}\"",
                 severity: "ERROR",
                 invariantSeverity: "ERROR",
                 sqlState: PostgresErrorCodes.UniqueViolation,
                 tableName: "friendships",
-                constraintName: IndicePar);
+                constraintName: AmizadeConfiguration.IndicePar);
             throw new DbUpdateException("Simulação de pedido cruzado gravado ao mesmo tempo.", violacao);
         }
 
