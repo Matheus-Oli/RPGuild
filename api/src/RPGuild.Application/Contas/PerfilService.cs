@@ -14,6 +14,13 @@ public sealed class PerfilService(
     FrontOptions front,
     ILogger<PerfilService> logger) : IPerfilService
 {
+    public async Task<Resultado<PerfilResponse>> ObterAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        // Token válido de um usuário que não existe mais: trata como sessão inválida.
+        var perfil = await identity.BuscarPerfilAsync(userId, cancellationToken);
+        return perfil is null ? ErrosDeConta.SessaoInvalida : Resposta(perfil);
+    }
+
     public async Task<Resultado<PerfilResponse>> AtualizarAsync(
         Guid userId, AtualizarPerfilRequest request, CancellationToken cancellationToken)
     {
@@ -35,7 +42,7 @@ public sealed class PerfilService(
             await ApagarAvatarAntigoAsync(anterior, cancellationToken);
         }
 
-        return perfil;
+        return Resposta(perfil);
     }
 
     public async Task<Resultado<Vazio>> PedirTrocaDeEmailAsync(
@@ -93,6 +100,14 @@ public sealed class PerfilService(
 
         return Vazio.Valor;
     }
+
+    private PerfilResponse Resposta(DadosDoPerfil perfil) => new(
+        perfil.Id,
+        perfil.Nome,
+        perfil.Nick,
+        perfil.Email,
+        perfil.AvatarPath,
+        perfil.AvatarPath is null ? null : storage.ObterUrlPublica(perfil.AvatarPath));
 
     private async Task ApagarAvatarAntigoAsync(string path, CancellationToken cancellationToken)
     {

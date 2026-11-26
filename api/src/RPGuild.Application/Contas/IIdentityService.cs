@@ -13,7 +13,7 @@ public interface IIdentityService
 
     Task<Resultado<UsuarioResponse>> VerificarCredenciaisAsync(string email, string senha, CancellationToken cancellationToken);
 
-    Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken);
+    Task<DadosDoPerfil?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Troca o e-mail (e o UserName) pelo pendente se o token for válido para ele, e limpa o pendente.

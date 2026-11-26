@@ -143,7 +143,7 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
             throw new InvalidOperationException(string.Join("; ", resultado.Errors.Select(e => e.Code)));
         }
 
-        var perfil = new PerfilResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!, usuario.AvatarPath);
+        var perfil = new DadosDoPerfil(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!, usuario.AvatarPath);
         return new PerfilAtualizado(perfil, anterior);
     }
 
@@ -237,9 +237,9 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
     }
 
-    public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
+    public Task<DadosDoPerfil?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)
-            .Select(u => new PerfilResponse(u.Id, u.Nome, u.Nick, u.Email!, u.AvatarPath))
+            .Select(u => new DadosDoPerfil(u.Id, u.Nome, u.Nick, u.Email!, u.AvatarPath))
             .SingleOrDefaultAsync(cancellationToken);
 }

@@ -15,6 +15,4 @@ public interface IAuthService
     Task<Resultado<Vazio>> RedefinirSenhaAsync(RedefinirSenhaRequest request, CancellationToken cancellationToken);
 
     Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken);
-
-    Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken);
 }

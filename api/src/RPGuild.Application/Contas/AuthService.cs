@@ -98,11 +98,4 @@ public sealed class AuthService(
             await refreshTokens.RevogarAsync(refreshToken, cancellationToken);
         }
     }
-
-    public async Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        // Token válido de um usuário que não existe mais: trata como sessão inválida.
-        var perfil = await identity.BuscarPerfilAsync(userId, cancellationToken);
-        return perfil is null ? ErrosDeConta.SessaoInvalida : perfil;
-    }
 }
