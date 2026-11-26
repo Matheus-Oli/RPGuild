@@ -79,6 +79,20 @@ public static class EmailTemplates
         {Assinatura}
         """);
 
+    // Aviso nº 5. Leva o @nick de quem pediu, nunca o e-mail.
+    public static EmailMessage PedidoDeAmizade(string nome, string email, string nomeDeQuemPediu, string nickDeQuemPediu, string link) => new(
+        email,
+        $"{nomeDeQuemPediu} te enviou um pedido de amizade na RPGuild",
+        $"""
+        Olá, {nome}!
+
+        {nomeDeQuemPediu} (@{nickDeQuemPediu}) te enviou um pedido de amizade na RPGuild. Para aceitar ou recusar, abra a Taberna:
+
+        {link}
+
+        {Assinatura}
+        """);
+
     private static string Duracao(TimeSpan duracao)
     {
         var horas = (int)duracao.TotalHours;
