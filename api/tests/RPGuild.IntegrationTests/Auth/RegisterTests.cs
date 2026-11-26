@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Auth;
@@ -64,5 +65,23 @@ public sealed class RegisterTests(PostgresFixture postgres) : IDisposable
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+    }
+
+    [Fact]
+    public async Task Register_CamposInvalidos_Retorna400ComErrosPorCampo()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+        var invalido = new NovoUsuario(Nome: "", Nick: "a b", Email: "sem-arroba", Senha: "curta");
+
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Url, invalido);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        using var corpo = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync());
+        var campos = corpo.RootElement.GetProperty("errors").EnumerateObject().Select(p => p.Name);
+        campos.ShouldBe(["nome", "nick", "email", "senha"], ignoreOrder: true);
     }
 }
