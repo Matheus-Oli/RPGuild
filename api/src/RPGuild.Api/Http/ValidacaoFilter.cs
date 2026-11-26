@@ -32,7 +32,7 @@ public sealed class ValidacaoFilter(IServiceProvider services, ProblemDetailsFac
         if (!context.ModelState.IsValid)
         {
             var problema = problemDetails.CreateValidationProblemDetails(
-                context.HttpContext, context.ModelState, StatusCodes.Status400BadRequest);
+                context.HttpContext, context.ModelState, StatusCodes.Status400BadRequest, title: "Dados inválidos");
             context.Result = new ObjectResult(problema)
             {
                 StatusCode = StatusCodes.Status400BadRequest,

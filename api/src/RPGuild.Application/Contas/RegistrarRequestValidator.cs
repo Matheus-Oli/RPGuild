@@ -9,7 +9,8 @@ public sealed class RegistrarRequestValidator : AbstractValidator<RegistrarReque
     {
         RuleFor(r => r.Nome)
             .NotEmpty().WithMessage("Informe o nome.")
-            .MaximumLength(RegrasDeConta.NomeTamanhoMaximo);
+            .MaximumLength(RegrasDeConta.NomeTamanhoMaximo)
+            .WithMessage($"O nome pode ter no máximo {RegrasDeConta.NomeTamanhoMaximo} caracteres.");
 
         RuleFor(r => r.Nick)
             .Must(Nick.EhValido)
@@ -21,6 +22,7 @@ public sealed class RegistrarRequestValidator : AbstractValidator<RegistrarReque
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Informe a senha.")
             .MinimumLength(RegrasDeConta.SenhaTamanhoMinimo)
+            .WithMessage($"A senha precisa de pelo menos {RegrasDeConta.SenhaTamanhoMinimo} caracteres.")
             .Must(senha => senha.Any(char.IsLetter)).WithMessage("A senha precisa de pelo menos uma letra.")
             .Must(senha => senha.Any(char.IsDigit)).WithMessage("A senha precisa de pelo menos um número.");
     }
