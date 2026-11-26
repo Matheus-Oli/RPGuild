@@ -1,6 +1,7 @@
 using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
+using RPGuild.Application.Comum;
 using RPGuild.Domain.Contas;
 
 namespace RPGuild.Application.Contas;
@@ -18,6 +19,26 @@ public sealed class RefreshTokenService(IRefreshTokenRepository repositorio, Tim
         var (token, emitido) = Gerar(userId, Guid.CreateVersion7(relogio.GetUtcNow()));
 
         await repositorio.AdicionarAsync(token, cancellationToken);
+        await repositorio.SalvarAlteracoesAsync(cancellationToken);
+
+        return emitido;
+    }
+
+    /// <summary>
+    /// Troca um refresh token por um novo da mesma família, revogando o atual.
+    /// </summary>
+    public async Task<Resultado<RefreshTokenEmitido>> RotacionarAsync(string token, CancellationToken cancellationToken)
+    {
+        var atual = await repositorio.BuscarPorHashAsync(CalcularHash(token), cancellationToken);
+        if (atual is null)
+        {
+            return ErrosDeConta.SessaoInvalida;
+        }
+
+        var (novo, emitido) = Gerar(atual.UserId, atual.FamilyId);
+        atual.Revogar(relogio.GetUtcNow(), novo.Id);
+
+        await repositorio.AdicionarAsync(novo, cancellationToken);
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
 
         return emitido;

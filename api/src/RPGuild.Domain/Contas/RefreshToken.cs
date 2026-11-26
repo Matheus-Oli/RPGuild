@@ -35,4 +35,10 @@ public sealed class RefreshToken
         CreatedAt = agora,
         ExpiresAt = agora + validade,
     };
+
+    public void Revogar(DateTimeOffset agora, Guid? substitutoId = null)
+    {
+        RevokedAt ??= agora;
+        ReplacedById ??= substitutoId;
+    }
 }
