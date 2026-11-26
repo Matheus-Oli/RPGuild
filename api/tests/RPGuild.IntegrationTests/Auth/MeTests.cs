@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Time.Testing;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Auth;
@@ -40,6 +41,24 @@ public sealed class MeTests(PostgresFixture postgres) : IDisposable
     {
         // Arrange
         using var cliente = _factory.CriarCliente();
+
+        // Act
+        var resposta = await cliente.GetAsync(Url);
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetMe_TokenExpiradoHaUmMinuto_Retorna401()
+    {
+        // Arrange: o token é emitido 16 min no passado, então venceu há 1 min.
+        var relogioNoPassado = new FakeTimeProvider(DateTimeOffset.UtcNow.AddMinutes(-16));
+        await using var factoryNoPassado = new RPGuildApiFactory(postgres, relogioNoPassado);
+        var logado = await factoryNoPassado.CriarUsuarioELogarAsync();
+
+        using var cliente = _factory.CriarCliente();
+        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", logado.AccessToken);
 
         // Act
         var resposta = await cliente.GetAsync(Url);
