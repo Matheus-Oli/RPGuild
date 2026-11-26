@@ -27,4 +27,14 @@ public sealed class MeController(IAuthService auth, IPerfilService perfil) : Con
         var resultado = await perfil.AtualizarAsync(User.Id(), request, cancellationToken);
         return this.ParaResposta(resultado, Ok);
     }
+
+    [HttpPut("email")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> PutEmail(TrocarEmailRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await perfil.PedirTrocaDeEmailAsync(User.Id(), request, cancellationToken);
+        return this.ParaResposta(resultado, _ => Accepted());
+    }
 }

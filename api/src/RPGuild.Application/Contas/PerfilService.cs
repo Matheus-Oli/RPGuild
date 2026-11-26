@@ -1,11 +1,17 @@
 using Microsoft.Extensions.Logging;
 using RPGuild.Application.Comum;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Contas;
 
 namespace RPGuild.Application.Contas;
 
-public sealed class PerfilService(IIdentityService identity, IStorageService storage, ILogger<PerfilService> logger) : IPerfilService
+public sealed class PerfilService(
+    IIdentityService identity,
+    IStorageService storage,
+    EnvioDeEmail emails,
+    FrontOptions front,
+    ILogger<PerfilService> logger) : IPerfilService
 {
     public async Task<Resultado<PerfilResponse>> AtualizarAsync(
         Guid userId, AtualizarPerfilRequest request, CancellationToken cancellationToken)
@@ -29,6 +35,23 @@ public sealed class PerfilService(IIdentityService identity, IStorageService sto
         }
 
         return perfil;
+    }
+
+    public async Task<Resultado<Vazio>> PedirTrocaDeEmailAsync(
+        Guid userId, TrocarEmailRequest request, CancellationToken cancellationToken)
+    {
+        var pedido = await identity.PedirTrocaDeEmailAsync(userId, request.Senha, request.NovoEmail.Trim(), cancellationToken);
+        if (!pedido.Sucesso)
+        {
+            return pedido.Erro!;
+        }
+
+        // A confirmação vai para o endereço novo: prova que ele é da pessoa. Só o token opaco vai na URL.
+        var dados = pedido.Valor!;
+        var link = $"{front.BaseUrl.TrimEnd('/')}/confirmar-email?token={dados.Token.Codificar()}";
+        await emails.EnviarAsync(EmailTemplates.ConfirmacaoDeNovoEmail(dados.Nome, dados.NovoEmail, link), cancellationToken);
+
+        return Vazio.Valor;
     }
 
     private async Task ApagarAvatarAntigoAsync(string path, CancellationToken cancellationToken)

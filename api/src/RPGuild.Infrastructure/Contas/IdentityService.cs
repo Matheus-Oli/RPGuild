@@ -147,6 +147,42 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return new PerfilAtualizado(perfil, anterior);
     }
 
+    public async Task<Resultado<DadosDeTrocaDeEmail>> PedirTrocaDeEmailAsync(
+        Guid userId, string senha, string novoEmail, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(userId.ToString());
+        if (usuario is null)
+        {
+            return ErrosDeConta.SessaoInvalida;
+        }
+
+        if (userManager.NormalizeEmail(novoEmail) == usuario.NormalizedEmail)
+        {
+            return ErrosDeConta.MesmoEmail;
+        }
+
+        if (!await userManager.CheckPasswordAsync(usuario, senha))
+        {
+            return ErrosDeConta.SenhaIncorreta;
+        }
+
+        if (await userManager.FindByEmailAsync(novoEmail) is not null)
+        {
+            return ErrosDeConta.EmailEmUso;
+        }
+
+        usuario.EmailPendente = novoEmail;
+        var resultado = await userManager.UpdateAsync(usuario);
+        if (!resultado.Succeeded)
+        {
+            throw new InvalidOperationException(string.Join("; ", resultado.Errors.Select(e => e.Code)));
+        }
+
+        // Mesmo provider (e validade) do token de redefinição; o propósito do token inclui o e-mail novo.
+        var token = await userManager.GenerateChangeEmailTokenAsync(usuario, novoEmail);
+        return new DadosDeTrocaDeEmail(usuario.Nome, novoEmail, new TokenDeRedefinicao(usuario.Id, token));
+    }
+
     public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)

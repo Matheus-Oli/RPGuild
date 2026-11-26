@@ -22,6 +22,13 @@ public interface IIdentityService
         Guid userId, string nome, Nick nick, string? avatarPath, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Confere a senha, grava o e-mail pendente e gera o token de troca. O e-mail atual não muda.
+    /// Erros: senha incorreta, mesmo e-mail, e-mail em uso por outra conta.
+    /// </summary>
+    Task<Resultado<DadosDeTrocaDeEmail>> PedirTrocaDeEmailAsync(
+        Guid userId, string senha, string novoEmail, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gera o token de redefinição de senha do usuário com este e-mail, ou null se não houver conta.
     /// </summary>
     Task<DadosDeRedefinicao?> GerarTokenDeRedefinicaoAsync(string email, CancellationToken cancellationToken);

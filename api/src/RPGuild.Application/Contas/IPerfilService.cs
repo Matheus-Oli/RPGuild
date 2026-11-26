@@ -8,4 +8,6 @@ namespace RPGuild.Application.Contas;
 public interface IPerfilService
 {
     Task<Resultado<PerfilResponse>> AtualizarAsync(Guid userId, AtualizarPerfilRequest request, CancellationToken cancellationToken);
+
+    Task<Resultado<Vazio>> PedirTrocaDeEmailAsync(Guid userId, TrocarEmailRequest request, CancellationToken cancellationToken);
 }
