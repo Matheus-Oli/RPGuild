@@ -13,7 +13,7 @@ public static class TokenAdulterado
 
     public static string Gerar(string token, string caso)
     {
-        var original = TokenDeRedefinicao.Decodificar(token)!;
+        var original = TokenOpaco.Decodificar(token)!;
         return caso switch
         {
             Lixo => "nao-e-um-token",

@@ -1,3 +1,3 @@
 namespace RPGuild.Application.Contas;
 
-public sealed record DadosDeRedefinicao(string Nome, string Email, TokenDeRedefinicao Token);
+public sealed record DadosDeRedefinicao(string Nome, string Email, TokenOpaco Token);

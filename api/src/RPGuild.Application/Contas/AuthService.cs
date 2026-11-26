@@ -79,7 +79,7 @@ public sealed class AuthService(
 
     public async Task<Resultado<Vazio>> RedefinirSenhaAsync(RedefinirSenhaRequest request, CancellationToken cancellationToken)
     {
-        var token = TokenDeRedefinicao.Decodificar(request.Token);
+        var token = TokenOpaco.Decodificar(request.Token);
         if (token is null || !await identity.RedefinirSenhaAsync(token, request.NovaSenha, cancellationToken))
         {
             return ErrosDeConta.TokenDeRedefinicaoInvalido;

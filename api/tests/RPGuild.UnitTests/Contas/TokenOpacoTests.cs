@@ -4,7 +4,7 @@ using RPGuild.Application.Contas;
 
 namespace RPGuild.UnitTests.Contas;
 
-public class TokenDeRedefinicaoTests
+public class TokenOpacoTests
 {
     // Formato típico do token do Identity: Base64 comum, com "+", "/" e "=".
     private const string TokenIdentity = "CfDJ8Ab+cD/eF==";
@@ -13,10 +13,10 @@ public class TokenDeRedefinicaoTests
     public void Decodificar_TextoCodificado_DevolveOMesmoUserIdEToken()
     {
         // Arrange
-        var original = new TokenDeRedefinicao(Guid.NewGuid(), TokenIdentity);
+        var original = new TokenOpaco(Guid.NewGuid(), TokenIdentity);
 
         // Act
-        var decodificado = TokenDeRedefinicao.Decodificar(original.Codificar());
+        var decodificado = TokenOpaco.Decodificar(original.Codificar());
 
         // Assert
         decodificado.ShouldBe(original);
@@ -26,7 +26,7 @@ public class TokenDeRedefinicaoTests
     public void Codificar_TokenComCaracteresDeBase64_GeraTextoSeguroParaUrl()
     {
         // Arrange
-        var token = new TokenDeRedefinicao(Guid.NewGuid(), TokenIdentity);
+        var token = new TokenOpaco(Guid.NewGuid(), TokenIdentity);
 
         // Act
         var texto = token.Codificar();
@@ -44,7 +44,7 @@ public class TokenDeRedefinicaoTests
     public void Decodificar_TextoInvalido_DevolveNull(string? texto)
     {
         // Act
-        var resultado = TokenDeRedefinicao.Decodificar(texto);
+        var resultado = TokenOpaco.Decodificar(texto);
 
         // Assert
         resultado.ShouldBeNull();
@@ -61,7 +61,7 @@ public class TokenDeRedefinicaoTests
         var texto = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(conteudo));
 
         // Act
-        var resultado = TokenDeRedefinicao.Decodificar(texto);
+        var resultado = TokenOpaco.Decodificar(texto);
 
         // Assert
         resultado.ShouldBeNull();

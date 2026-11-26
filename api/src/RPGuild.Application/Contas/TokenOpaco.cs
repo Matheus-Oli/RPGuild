@@ -4,9 +4,10 @@ using System.Text;
 namespace RPGuild.Application.Contas;
 
 /// <summary>
-/// Token de redefinição de senha que vai no link: um texto opaco com o id do usuário e o token do Identity.
+/// Token que vai nos links de conta (redefinição de senha, troca de e-mail): um texto opaco com o id do usuário
+/// e o token do Identity.
 /// </summary>
-public sealed record TokenDeRedefinicao(Guid UserId, string TokenIdentity)
+public sealed record TokenOpaco(Guid UserId, string TokenIdentity)
 {
     private const char Separador = ':';
 
@@ -15,7 +16,7 @@ public sealed record TokenDeRedefinicao(Guid UserId, string TokenIdentity)
     /// <summary>
     /// Devolve null se o texto não for um token válido.
     /// </summary>
-    public static TokenDeRedefinicao? Decodificar(string? texto)
+    public static TokenOpaco? Decodificar(string? texto)
     {
         if (string.IsNullOrWhiteSpace(texto) || !Base64Url.IsValid(texto))
         {
@@ -39,6 +40,6 @@ public sealed record TokenDeRedefinicao(Guid UserId, string TokenIdentity)
         }
 
         var tokenIdentity = conteudo[(separador + 1)..];
-        return tokenIdentity.Length == 0 ? null : new TokenDeRedefinicao(userId, tokenIdentity);
+        return tokenIdentity.Length == 0 ? null : new TokenOpaco(userId, tokenIdentity);
     }
 }

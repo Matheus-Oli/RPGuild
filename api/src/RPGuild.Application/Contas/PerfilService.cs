@@ -65,7 +65,7 @@ public sealed class PerfilService(
     public async Task<Resultado<Vazio>> ConfirmarTrocaDeEmailAsync(
         ConfirmarTrocaDeEmailRequest request, Guid? sessaoAtual, CancellationToken cancellationToken)
     {
-        var token = TokenDeRedefinicao.Decodificar(request.Token);
+        var token = TokenOpaco.Decodificar(request.Token);
         if (token is null)
         {
             return ErrosDeConta.TokenDeTrocaDeEmailInvalido;

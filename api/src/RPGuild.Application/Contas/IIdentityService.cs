@@ -19,7 +19,7 @@ public interface IIdentityService
     /// Troca o e-mail (e o UserName) pelo pendente se o token for válido para ele, e limpa o pendente.
     /// Erros: token inválido, expirado ou já usado; e-mail tomado por outra conta depois do pedido.
     /// </summary>
-    Task<Resultado<EmailTrocado>> ConfirmarTrocaDeEmailAsync(TokenDeRedefinicao token, CancellationToken cancellationToken);
+    Task<Resultado<EmailTrocado>> ConfirmarTrocaDeEmailAsync(TokenOpaco token, CancellationToken cancellationToken);
 
     /// <summary>
     /// Troca a senha conferindo a atual. Erro: senha atual incorreta.
@@ -47,5 +47,5 @@ public interface IIdentityService
     /// <summary>
     /// Troca a senha se o token for válido. Devolve false para token inválido, expirado ou já usado.
     /// </summary>
-    Task<bool> RedefinirSenhaAsync(TokenDeRedefinicao token, string novaSenha, CancellationToken cancellationToken);
+    Task<bool> RedefinirSenhaAsync(TokenOpaco token, string novaSenha, CancellationToken cancellationToken);
 }

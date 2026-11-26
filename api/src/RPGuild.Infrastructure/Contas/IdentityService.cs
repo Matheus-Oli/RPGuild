@@ -91,10 +91,10 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         }
 
         var token = await userManager.GeneratePasswordResetTokenAsync(usuario);
-        return new DadosDeRedefinicao(usuario.Nome, usuario.Email!, new TokenDeRedefinicao(usuario.Id, token));
+        return new DadosDeRedefinicao(usuario.Nome, usuario.Email!, new TokenOpaco(usuario.Id, token));
     }
 
-    public async Task<bool> RedefinirSenhaAsync(TokenDeRedefinicao token, string novaSenha, CancellationToken cancellationToken)
+    public async Task<bool> RedefinirSenhaAsync(TokenOpaco token, string novaSenha, CancellationToken cancellationToken)
     {
         var usuario = await userManager.FindByIdAsync(token.UserId.ToString());
         if (usuario is null)
@@ -180,11 +180,11 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
 
         // Mesmo provider (e validade) do token de redefinição; o propósito do token inclui o e-mail novo.
         var token = await userManager.GenerateChangeEmailTokenAsync(usuario, novoEmail);
-        return new DadosDeTrocaDeEmail(usuario.Nome, novoEmail, new TokenDeRedefinicao(usuario.Id, token));
+        return new DadosDeTrocaDeEmail(usuario.Nome, novoEmail, new TokenOpaco(usuario.Id, token));
     }
 
     public async Task<Resultado<EmailTrocado>> ConfirmarTrocaDeEmailAsync(
-        TokenDeRedefinicao token, CancellationToken cancellationToken)
+        TokenOpaco token, CancellationToken cancellationToken)
     {
         var usuario = await userManager.FindByIdAsync(token.UserId.ToString());
         if (usuario?.EmailPendente is not { } novoEmail)
