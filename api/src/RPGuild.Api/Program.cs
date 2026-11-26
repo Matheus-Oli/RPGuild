@@ -1,6 +1,5 @@
-using DotNetEnv;
-using DotNetEnv.Configuration;
 using Microsoft.OpenApi;
+using RPGuild.Api.Configuracao;
 using RPGuild.Api.Http;
 using RPGuild.Application;
 using RPGuild.Infrastructure;
@@ -12,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsDevelopment())
 {
     // Credenciais de dev (ex.: Email__Senha) no .env da raiz do monorepo, fora do Git. Em produção vêm do ambiente.
-    builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
+    builder.Configuration.AdicionarDotEnv();
 }
 
 builder.Services.AddControllers(options =>
