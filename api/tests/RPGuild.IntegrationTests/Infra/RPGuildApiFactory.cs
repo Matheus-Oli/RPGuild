@@ -26,6 +26,10 @@ public sealed class RPGuildApiFactory(string connectionString, TimeProvider? rel
         builder.UseSetting("Jwt:Issuer", "rpguild-api");
         builder.UseSetting("Jwt:Audience", "rpguild-web");
         builder.UseSetting("Cors:Origins:0", "http://localhost:5173");
+        // Só para a configuração passar na validação: o envio de verdade é trocado pelo FakeEmailSender.
+        builder.UseSetting("Email:Usuario", "testes@rpguild.invalid");
+        builder.UseSetting("Email:Senha", "nao-usada");
+        builder.UseSetting("Email:RemetenteEmail", "testes@rpguild.invalid");
 
         builder.ConfigureTestServices(services =>
         {

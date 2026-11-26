@@ -1,3 +1,5 @@
+using DotNetEnv;
+using DotNetEnv.Configuration;
 using Microsoft.OpenApi;
 using RPGuild.Api.Http;
 using RPGuild.Application;
@@ -6,6 +8,12 @@ using RPGuild.Infrastructure;
 const string FrontCorsPolicy = "Front";
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    // Credenciais de dev (ex.: Email__Senha) no .env da raiz do monorepo, fora do Git. Em produção vêm do ambiente.
+    builder.Configuration.AddDotNetEnv(".env", LoadOptions.TraversePath());
+}
 
 builder.Services.AddControllers(options =>
 {

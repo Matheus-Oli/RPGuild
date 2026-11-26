@@ -7,8 +7,10 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using RPGuild.Application.Contas;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
+using RPGuild.Infrastructure.Notificacoes;
 using RPGuild.Infrastructure.Persistence;
 
 namespace RPGuild.Infrastructure;
@@ -63,6 +65,9 @@ public static class DependencyInjection
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);
         services.AddSingleton<ITokenService, JwtTokenService>();
+
+        services.AddSingleton(EmailOptions.Ler(configuration));
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
