@@ -12,5 +12,10 @@ public class ApplicationUser : IdentityUser<Guid>
 
     public string? AvatarPath { get; set; }
 
+    /// <summary>
+    /// E-mail novo pedido em PUT /api/me/email, esperando a confirmação no próprio endereço.
+    /// </summary>
+    public string? EmailPendente { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 }

@@ -17,6 +17,7 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
         builder.Property(u => u.Nick).HasMaxLength(Nick.TamanhoMaximo).IsRequired();
         builder.Property(u => u.NickNormalizado).HasMaxLength(Nick.TamanhoMaximo).IsRequired();
         builder.Property(u => u.AvatarPath).HasMaxLength(RegrasDeConta.AvatarPathTamanhoMaximo);
+        builder.Property(u => u.EmailPendente).HasMaxLength(RegrasDeConta.EmailTamanhoMaximo);
 
         builder.HasIndex(u => u.NickNormalizado).IsUnique();
 
