@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using RPGuild.Infrastructure.Persistence;
 using RPGuild.IntegrationTests.Infra;
 
 namespace RPGuild.IntegrationTests.Persistence;
@@ -11,7 +10,7 @@ public class MigrationsTests(PostgresFixture postgres)
     public async Task Migrate_BancoVazio_AplicaInitialCreate()
     {
         // Arrange
-        await using var context = CriarContext(await postgres.CriarBancoVazioAsync());
+        await using var context = postgres.CriarDbContext(await postgres.CriarBancoVazioAsync());
 
         // Act
         await context.Database.MigrateAsync();
@@ -25,19 +24,12 @@ public class MigrationsTests(PostgresFixture postgres)
     public void Modelo_SemMudancasPendentes_NaoPrecisaDeNovaMigration()
     {
         // Arrange
-        using var context = CriarContext(postgres.ConnectionString);
+        using var context = postgres.CriarDbContext();
 
         // Act
         var temMudancas = context.Database.HasPendingModelChanges();
 
         // Assert
         temMudancas.ShouldBeFalse();
-    }
-
-    private static AppDbContext CriarContext(string connectionString)
-    {
-        var builder = new DbContextOptionsBuilder<AppDbContext>();
-        AppDbContextOptions.Configure(builder, connectionString);
-        return new AppDbContext(builder.Options);
     }
 }

@@ -16,13 +16,21 @@ public sealed class PostgresFixture : IAsyncLifetime
         await _container.StartAsync();
 
         // Aplica o schema uma vez por execução; os testes já encontram as tabelas prontas.
-        var builder = new DbContextOptionsBuilder<AppDbContext>();
-        AppDbContextOptions.Configure(builder, ConnectionString);
-        await using var context = new AppDbContext(builder.Options);
+        await using var context = CriarDbContext();
         await context.Database.MigrateAsync();
     }
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
+
+    /// <summary>
+    /// Cria um <see cref="AppDbContext"/> com a mesma configuração da API, no banco padrão do container ou no informado.
+    /// </summary>
+    public AppDbContext CriarDbContext(string? connectionString = null)
+    {
+        var builder = new DbContextOptionsBuilder<AppDbContext>();
+        AppDbContextOptions.Configure(builder, connectionString ?? ConnectionString);
+        return new AppDbContext(builder.Options);
+    }
 
     /// <summary>
     /// Cria um banco novo, sem nenhuma tabela, no mesmo container e devolve a connection string dele.
