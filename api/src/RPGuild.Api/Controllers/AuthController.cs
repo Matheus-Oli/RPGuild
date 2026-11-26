@@ -25,6 +25,14 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
         return this.ParaResposta(resultado, Sessao);
     }
 
+    [HttpPost("refresh")]
+    [ProducesResponseType<AccessTokenResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    {
+        var resultado = await auth.RenovarAsync(RefreshCookie.Ler(Request)!, cancellationToken);
+        return this.ParaResposta(resultado, Sessao);
+    }
+
     private OkObjectResult Sessao(SessaoAutenticada sessao)
     {
         RefreshCookie.Definir(Response, sessao.Refresh);

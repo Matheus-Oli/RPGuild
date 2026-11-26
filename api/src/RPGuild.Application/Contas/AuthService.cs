@@ -22,6 +22,25 @@ public sealed class AuthService(IIdentityService identity, ITokenService tokens,
         return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
     }
 
+    public async Task<Resultado<SessaoAutenticada>> RenovarAsync(string refreshToken, CancellationToken cancellationToken)
+    {
+        var rotacao = await refreshTokens.RotacionarAsync(refreshToken, cancellationToken);
+        if (!rotacao.Sucesso)
+        {
+            return rotacao.Erro!;
+        }
+
+        var refresh = rotacao.Valor!;
+        var perfil = await identity.BuscarPerfilAsync(refresh.UserId, cancellationToken);
+        if (perfil is null)
+        {
+            return ErrosDeConta.SessaoInvalida;
+        }
+
+        var usuario = new UsuarioResponse(perfil.Id, perfil.Nome, perfil.Nick, perfil.Email);
+        return new SessaoAutenticada(tokens.GerarAccessToken(usuario), refresh);
+    }
+
     public async Task<Resultado<PerfilResponse>> ObterPerfilAsync(Guid userId, CancellationToken cancellationToken)
     {
         // Token válido de um usuário que não existe mais: trata como sessão inválida.
