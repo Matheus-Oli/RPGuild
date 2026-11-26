@@ -38,6 +38,15 @@ public sealed class MeController(IAuthService auth, IPerfilService perfil) : Con
         return this.ParaResposta(resultado, _ => Accepted());
     }
 
+    [HttpPut("password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PutPassword(TrocarSenhaRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await perfil.TrocarSenhaAsync(User.Id(), request, User.SessaoId(), cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
+
     // Anônimo: o link chega por e-mail e pode ser aberto sem estar logado. Se vier Bearer, a sessão dele continua.
     [AllowAnonymous]
     [HttpPost("email/confirm")]

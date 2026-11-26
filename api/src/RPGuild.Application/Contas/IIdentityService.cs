@@ -22,6 +22,11 @@ public interface IIdentityService
     Task<Resultado<EmailTrocado>> ConfirmarTrocaDeEmailAsync(TokenDeRedefinicao token, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Troca a senha conferindo a atual. Erro: senha atual incorreta.
+    /// </summary>
+    Task<Resultado<UsuarioResponse>> TrocarSenhaAsync(Guid userId, string atual, string nova, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Troca nome, nick e avatar. Erros: nick em uso por outro usuário, ou usuário que não existe mais.
     /// </summary>
     Task<Resultado<PerfilAtualizado>> AtualizarPerfilAsync(

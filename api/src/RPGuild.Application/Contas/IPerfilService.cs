@@ -14,4 +14,8 @@ public interface IPerfilService
     /// <param name="sessaoAtual">Claim "sid" do Bearer, se veio um; essa sessão continua aberta.</param>
     Task<Resultado<Vazio>> ConfirmarTrocaDeEmailAsync(
         ConfirmarTrocaDeEmailRequest request, Guid? sessaoAtual, CancellationToken cancellationToken);
+
+    /// <param name="sessaoAtual">Claim "sid" do Bearer; essa sessão continua aberta.</param>
+    Task<Resultado<Vazio>> TrocarSenhaAsync(
+        Guid userId, TrocarSenhaRequest request, Guid? sessaoAtual, CancellationToken cancellationToken);
 }

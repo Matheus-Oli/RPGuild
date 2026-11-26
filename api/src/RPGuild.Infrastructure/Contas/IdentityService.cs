@@ -213,6 +213,30 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return new EmailTrocado(usuario.Id, usuario.Nome, antigo, novoEmail);
     }
 
+    public async Task<Resultado<UsuarioResponse>> TrocarSenhaAsync(
+        Guid userId, string atual, string nova, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(userId.ToString());
+        if (usuario is null)
+        {
+            return ErrosDeConta.SessaoInvalida;
+        }
+
+        var resultado = await userManager.ChangePasswordAsync(usuario, atual, nova);
+        if (resultado.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.PasswordMismatch)))
+        {
+            return ErrosDeConta.SenhaIncorreta;
+        }
+
+        if (!resultado.Succeeded)
+        {
+            // A política de senha já foi conferida no request; outro erro aqui é inesperado.
+            throw new InvalidOperationException(string.Join("; ", resultado.Errors.Select(e => e.Code)));
+        }
+
+        return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
+    }
+
     public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)

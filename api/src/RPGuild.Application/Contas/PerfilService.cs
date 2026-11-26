@@ -78,6 +78,22 @@ public sealed class PerfilService(
         return Vazio.Valor;
     }
 
+    public async Task<Resultado<Vazio>> TrocarSenhaAsync(
+        Guid userId, TrocarSenhaRequest request, Guid? sessaoAtual, CancellationToken cancellationToken)
+    {
+        var troca = await identity.TrocarSenhaAsync(userId, request.Atual, request.Nova, cancellationToken);
+        if (!troca.Sucesso)
+        {
+            return troca.Erro!;
+        }
+
+        var usuario = troca.Valor!;
+        await emails.EnviarAsync(EmailTemplates.SenhaAlterada(usuario.Nome, usuario.Email, front.BaseUrl), cancellationToken);
+        await refreshTokens.RevogarOutrasSessoesAsync(userId, sessaoAtual, cancellationToken);
+
+        return Vazio.Valor;
+    }
+
     private async Task ApagarAvatarAntigoAsync(string path, CancellationToken cancellationToken)
     {
         try
