@@ -12,6 +12,13 @@ public interface INotificacaoRepository
 
     Task<int> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// A notificação, se for deste usuário; senão, null.
+    /// </summary>
+    Task<Notificacao?> BuscarDoUsuarioAsync(Guid id, Guid userId, CancellationToken cancellationToken);
+
+    Task MarcarTodasComoLidasAsync(Guid userId, DateTimeOffset agora, CancellationToken cancellationToken);
+
     Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken);
 
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);

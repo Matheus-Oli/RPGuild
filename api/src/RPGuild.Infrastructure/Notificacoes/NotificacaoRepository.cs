@@ -33,6 +33,14 @@ public sealed class NotificacaoRepository(AppDbContext db) : INotificacaoReposit
     public Task<int> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
         db.Notificacoes.CountAsync(n => n.UserId == userId && n.LidaEm == null, cancellationToken);
 
+    public Task<Notificacao?> BuscarDoUsuarioAsync(Guid id, Guid userId, CancellationToken cancellationToken) =>
+        db.Notificacoes.SingleOrDefaultAsync(n => n.Id == id && n.UserId == userId, cancellationToken);
+
+    public Task MarcarTodasComoLidasAsync(Guid userId, DateTimeOffset agora, CancellationToken cancellationToken) =>
+        db.Notificacoes
+            .Where(n => n.UserId == userId && n.LidaEm == null)
+            .ExecuteUpdateAsync(set => set.SetProperty(n => n.LidaEm, agora), cancellationToken);
+
     public async Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken) =>
         await db.Notificacoes.AddAsync(notificacao, cancellationToken);
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RPGuild.Application.Comum;
 using RPGuild.Domain.Notificacoes;
 
 namespace RPGuild.Application.Notificacoes;
@@ -6,7 +7,7 @@ namespace RPGuild.Application.Notificacoes;
 /// <summary>
 /// O sininho do usuário logado (/api/notifications). Só enxerga as notificações dele.
 /// </summary>
-public sealed class NotificacoesService(INotificacaoRepository notificacoes)
+public sealed class NotificacoesService(INotificacaoRepository notificacoes, TimeProvider relogio)
 {
     /// <summary>
     /// As mais novas primeiro, paginadas por cursor. O request já chega validado (cursor decodificável, limite ≥ 1).
@@ -27,6 +28,25 @@ public sealed class NotificacoesService(INotificacaoRepository notificacoes)
 
     public async Task<ContagemDeNaoLidasResponse> ContarNaoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
         new(await notificacoes.ContarNaoLidasAsync(userId, cancellationToken));
+
+    /// <summary>
+    /// Idempotente: marcar uma já lida mantém a data da primeira leitura.
+    /// </summary>
+    public async Task<Resultado<Vazio>> MarcarComoLidaAsync(Guid userId, Guid id, CancellationToken cancellationToken)
+    {
+        var notificacao = await notificacoes.BuscarDoUsuarioAsync(id, userId, cancellationToken);
+        if (notificacao is null)
+        {
+            return ErrosDeNotificacoes.NotificacaoNaoEncontrada;
+        }
+
+        notificacao.MarcarComoLida(relogio.GetUtcNow());
+        await notificacoes.SalvarAlteracoesAsync(cancellationToken);
+        return Vazio.Valor;
+    }
+
+    public Task MarcarTodasComoLidasAsync(Guid userId, CancellationToken cancellationToken) =>
+        notificacoes.MarcarTodasComoLidasAsync(userId, relogio.GetUtcNow(), cancellationToken);
 
     private static NotificacaoResponse Resposta(Notificacao notificacao)
     {

@@ -20,4 +20,21 @@ public sealed class NotificationsController(NotificacoesService notificacoes) : 
     [ProducesResponseType<ContagemDeNaoLidasResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> NaoLidas(CancellationToken cancellationToken) =>
         Ok(await notificacoes.ContarNaoLidasAsync(User.Id(), cancellationToken));
+
+    [HttpPost("{id:guid}/read")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Ler(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await notificacoes.MarcarComoLidaAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
+
+    [HttpPost("read-all")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> LerTodas(CancellationToken cancellationToken)
+    {
+        await notificacoes.MarcarTodasComoLidasAsync(User.Id(), cancellationToken);
+        return NoContent();
+    }
 }
