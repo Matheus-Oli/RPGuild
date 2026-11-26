@@ -16,4 +16,12 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
         var resultado = await auth.RegistrarAsync(request, cancellationToken);
         return this.ParaResposta(resultado, usuario => StatusCode(StatusCodes.Status201Created, usuario));
     }
+
+    [HttpPost("login")]
+    [ProducesResponseType<AccessTokenResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await auth.LoginAsync(request, cancellationToken);
+        return this.ParaResposta(resultado, sessao => Ok(new AccessTokenResponse(sessao.Access.Token, sessao.Access.ExpiresAt)));
+    }
 }

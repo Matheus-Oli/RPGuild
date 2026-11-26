@@ -10,4 +10,6 @@ public interface IIdentityService
 {
     Task<Resultado<UsuarioResponse>> CriarUsuarioAsync(
         string nome, Nick nick, string email, string senha, CancellationToken cancellationToken);
+
+    Task<Resultado<UsuarioResponse>> VerificarCredenciaisAsync(string email, string senha, CancellationToken cancellationToken);
 }

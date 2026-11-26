@@ -55,4 +55,16 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
 
         return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, email);
     }
+
+    public async Task<Resultado<UsuarioResponse>> VerificarCredenciaisAsync(
+        string email, string senha, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByEmailAsync(email);
+        if (usuario is null || !await userManager.CheckPasswordAsync(usuario, senha))
+        {
+            throw new NotImplementedException("Credenciais inválidas: tratado no próximo ciclo.");
+        }
+
+        return new UsuarioResponse(usuario.Id, usuario.Nome, usuario.Nick, usuario.Email!);
+    }
 }

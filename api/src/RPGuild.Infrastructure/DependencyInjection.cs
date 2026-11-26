@@ -49,6 +49,10 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<AppDbContext>();
 
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
+        services.AddSingleton(JwtOptions.Ler(configuration));
+        services.AddSingleton<ITokenService, JwtTokenService>();
 
         services.AddHealthChecks()
             .AddDbContextCheck<AppDbContext>(DatabaseHealthCheck);
