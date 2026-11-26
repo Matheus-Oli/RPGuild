@@ -83,6 +83,7 @@ dotnet ef database update --project api/src/RPGuild.Infrastructure --startup-pro
 - A connection string de desenvolvimento fica em `appsettings.Development.json` (`ConnectionStrings:Default`). Em produção ela vem da variável de ambiente `ConnectionStrings__Default`; sem ela, a API não sobe.
 - As migrations **não** são aplicadas no startup da API: rode o `database update` sempre que entrar migration nova.
 - O schema usa snake_case (`EFCore.NamingConventions`) e as migrations ficam em `src/RPGuild.Infrastructure/Persistence/Migrations`.
+- O `TimeProvider` da API é o `RelogioEmMicrossegundos`, que trunca o "agora" para a precisão do Postgres. Assim a data que um `POST` devolve é exatamente a que um `GET` lê depois. Nos testes, a `RPGuildApiFactory` embrulha o relógio injetado do mesmo jeito.
 - `GET /health` responde `Healthy` (200) com o banco no ar e `Unhealthy` (503) sem ele.
 
 Criar uma migration nova (depois de mudar o modelo):
@@ -243,7 +244,7 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 1. `emailOuNick` com `@` no meio é e-mail, e a busca é por e-mail. Senão, é nick, com ou sem `@` na frente (`@muirenn`), sem diferenciar caixa (`Nick.Normalizar`). Vazio, só `@` ou nick fora da regra dá 400.
 2. Para si mesmo dá 400 e ninguém encontrado dá 404.
 3. Já são amigos dá 409, e já ter um pedido pendente meu para a pessoa também.
-4. Pedido pendente **dela para mim** dá 409 com "Essa pessoa já te enviou um pedido. Aceite na sua lista." Não há aceite automático.
+4. Pedido pendente **dela para mim** dá 409 com "Essa pessoa já te enviou um pedido. Aceite na sua lista." Não há aceite automático. Se os dois pedirem ao mesmo tempo, o índice único do par barra o segundo (Postgres 23505 em `ix_friendships_par`) e ele recebe esse mesmo 409.
 5. Um pedido **recusado** pode ser reenviado na hora, por qualquer um dos dois. A linha recusada vira um pedido pendente novo, com o mesmo id, o novo sentido e o `created_at` do reenvio.
 6. O destinatário recebe o e-mail do aviso nº 5, com o nome e o @nick de quem pediu e o link `{Front:BaseUrl}/taberna`. Se o envio falhar, segue a regra de [E-mail](#e-mail): o 201 sai do mesmo jeito.
 
