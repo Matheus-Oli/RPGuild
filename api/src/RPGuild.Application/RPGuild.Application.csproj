@@ -4,4 +4,8 @@
     <ProjectReference Include="..\RPGuild.Domain\RPGuild.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+  </ItemGroup>
+
 </Project>

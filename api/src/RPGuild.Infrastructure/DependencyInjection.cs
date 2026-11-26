@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RPGuild.Infrastructure.Persistence;
 
@@ -21,6 +22,8 @@ public static class DependencyInjection
                 "A connection string 'ConnectionStrings:Default' não foi configurada. " +
                 "Em desenvolvimento ela fica no appsettings.Development.json; em produção, na variável de ambiente ConnectionStrings__Default.");
         }
+
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));
 
