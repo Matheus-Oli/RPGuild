@@ -98,6 +98,17 @@ public sealed class AuthService(
         return Vazio.Valor;
     }
 
+    public async Task<Resultado<Vazio>> RedefinirSenhaAsync(RedefinirSenhaRequest request, CancellationToken cancellationToken)
+    {
+        var token = TokenDeRedefinicao.Decodificar(request.Token);
+        if (token is null || !await identity.RedefinirSenhaAsync(token, request.NovaSenha, cancellationToken))
+        {
+            return ErrosDeConta.TokenDeRedefinicaoInvalido;
+        }
+
+        return Vazio.Valor;
+    }
+
     public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)
     {
         // Logout é idempotente: sem cookie ou com token já revogado, só não há o que revogar.

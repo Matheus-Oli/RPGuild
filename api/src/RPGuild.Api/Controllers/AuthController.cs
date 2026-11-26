@@ -42,6 +42,15 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
         return this.ParaResposta(resultado, _ => NoContent());
     }
 
+    [HttpPost("reset-password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword(RedefinirSenhaRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await auth.RedefinirSenhaAsync(request, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
+
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)

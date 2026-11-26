@@ -19,4 +19,9 @@ public interface IIdentityService
     /// Gera o token de redefinição de senha do usuário com este e-mail, ou null se não houver conta.
     /// </summary>
     Task<DadosDeRedefinicao?> GerarTokenDeRedefinicaoAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Troca a senha se o token for válido. Devolve false para token inválido, expirado ou já usado.
+    /// </summary>
+    Task<bool> RedefinirSenhaAsync(TokenDeRedefinicao token, string novaSenha, CancellationToken cancellationToken);
 }

@@ -94,6 +94,19 @@ public sealed class IdentityService(UserManager<ApplicationUser> userManager, Ti
         return new DadosDeRedefinicao(usuario.Nome, usuario.Email!, new TokenDeRedefinicao(usuario.Id, token));
     }
 
+    public async Task<bool> RedefinirSenhaAsync(TokenDeRedefinicao token, string novaSenha, CancellationToken cancellationToken)
+    {
+        var usuario = await userManager.FindByIdAsync(token.UserId.ToString());
+        if (usuario is null)
+        {
+            return false;
+        }
+
+        // O reset troca o security stamp: o mesmo token (e qualquer outro emitido antes) deixa de valer.
+        var resultado = await userManager.ResetPasswordAsync(usuario, token.TokenIdentity, novaSenha);
+        return resultado.Succeeded;
+    }
+
     public Task<PerfilResponse?> BuscarPerfilAsync(Guid userId, CancellationToken cancellationToken) =>
         userManager.Users
             .Where(u => u.Id == userId)

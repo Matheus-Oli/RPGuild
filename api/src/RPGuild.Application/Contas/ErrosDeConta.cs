@@ -19,6 +19,9 @@ public static class ErrosDeConta
     public static readonly Erro EmailNaoCadastrado = new(
         TipoErro.NaoEncontrado, "E-mail não cadastrado", "Não existe conta com este e-mail.");
 
+    public static readonly Erro TokenDeRedefinicaoInvalido = new(
+        TipoErro.Validacao, "Token inválido", "O link de redefinição é inválido, já foi usado ou expirou. Peça um novo.");
+
     public static readonly Erro SessaoInvalida = new(
         TipoErro.NaoAutorizado, "Sessão inválida", "Sua sessão expirou ou não é válida. Entre novamente.");
 }
