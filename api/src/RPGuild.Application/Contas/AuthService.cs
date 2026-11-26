@@ -8,7 +8,6 @@ public sealed class AuthService(
     IIdentityService identity,
     ITokenService tokens,
     RefreshTokenService refreshTokens,
-    EnvioDeEmail emails,
     INotificador notificador,
     FrontOptions front) : IAuthService
 {
@@ -72,7 +71,7 @@ public sealed class AuthService(
 
         // Só o token opaco vai na URL; o e-mail não.
         var link = $"{front.BaseUrl.TrimEnd('/')}/redefinir-senha?token={dados.Token.Codificar()}";
-        await emails.EnviarAsync(EmailTemplates.RedefinicaoDeSenha(dados.Nome, dados.Email, link), cancellationToken);
+        await notificador.NotificarAsync(dados.Token.UserId, new RedefinicaoDeSenha(link), cancellationToken);
 
         return Vazio.Valor;
     }
