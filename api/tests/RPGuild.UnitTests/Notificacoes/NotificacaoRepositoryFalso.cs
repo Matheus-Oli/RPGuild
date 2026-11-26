@@ -12,6 +12,11 @@ public sealed class NotificacaoRepositoryFalso : INotificacaoRepository
 
     public int VezesSalvo { get; private set; }
 
+    // A listagem é uma consulta por chave no banco: coberta pelos testes de integração.
+    public Task<IReadOnlyList<Notificacao>> ListarAsync(
+        Guid userId, bool naoLidas, CursorDeNotificacoes? apos, int quantidade, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken)
     {
         Notificacoes.Add(notificacao);

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Domain.Notificacoes;
 using RPGuild.Infrastructure.Persistence;
@@ -6,6 +7,29 @@ namespace RPGuild.Infrastructure.Notificacoes;
 
 public sealed class NotificacaoRepository(AppDbContext db) : INotificacaoRepository
 {
+    public async Task<IReadOnlyList<Notificacao>> ListarAsync(
+        Guid userId, bool naoLidas, CursorDeNotificacoes? apos, int quantidade, CancellationToken cancellationToken)
+    {
+        var consulta = db.Notificacoes.Where(n => n.UserId == userId);
+        if (naoLidas)
+        {
+            consulta = consulta.Where(n => n.LidaEm == null);
+        }
+
+        if (apos is not null)
+        {
+            // Mesma ordem do índice (created_at desc, id): o que vem depois do último item da página anterior.
+            var (criadoEm, id) = (apos.CriadoEm, apos.Id);
+            consulta = consulta.Where(n => n.CreatedAt < criadoEm || (n.CreatedAt == criadoEm && n.Id > id));
+        }
+
+        return await consulta
+            .OrderByDescending(n => n.CreatedAt)
+            .ThenBy(n => n.Id)
+            .Take(quantidade)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AdicionarAsync(Notificacao notificacao, CancellationToken cancellationToken) =>
         await db.Notificacoes.AddAsync(notificacao, cancellationToken);
 
