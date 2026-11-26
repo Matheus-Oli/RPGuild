@@ -115,6 +115,22 @@ public sealed class AmizadeService(
     }
 
     /// <summary>
+    /// Qualquer um dos dois pode desfazer a amizade: a linha é apagada e quem foi removido não é avisado (aviso nº 8).
+    /// </summary>
+    public async Task<Resultado<Vazio>> RemoverAmigoAsync(Guid userId, Guid amigoId, CancellationToken cancellationToken)
+    {
+        var amizade = await amizades.BuscarDoParAsync(userId, amigoId, cancellationToken);
+        if (amizade is not { Status: StatusDaAmizade.Aceita })
+        {
+            return ErrosDaTaberna.AmizadeNaoEncontrada;
+        }
+
+        amizades.Remover(amizade);
+        await amizades.SalvarAlteracoesAsync(cancellationToken);
+        return Vazio.Valor;
+    }
+
+    /// <summary>
     /// Só o destinatário responde, e só enquanto está pendente. Para os outros, o pedido "não existe" (404).
     /// </summary>
     private async Task<Resultado<Vazio>> ResponderAsync(
