@@ -347,7 +347,7 @@ Nos testes, `ConexaoNoHub` abre a conexão pelo TestServer, com transporte LongP
 
 Hangfire (`Hangfire.AspNetCore` + `Hangfire.PostgreSql`) com storage no mesmo Postgres, no schema `hangfire`, que a própria lib cria. Não há migration do EF para essas tabelas, e o Respawn dos testes não mexe nesse schema. O Hangfire puxa o `Newtonsoft.Json` 11.0.1, que tem vulnerabilidade conhecida; o `RPGuild.Infrastructure` fixa a 13.0.4.
 
-- **Fila de e-mail** (`IFilaDeEmail`, implementada por `HangfireFilaDeEmail`): a requisição só enfileira e o job `EnvioDeEmailJob` envia. Se o envio falhar, a exceção sobe e o Hangfire tenta de novo (tentativas automáticas padrão). A mensagem inteira fica gravada no job.
+- **Fila de e-mail** (`IFilaDeEmail`, implementada por `HangfireFilaDeEmail`): a requisição só enfileira e o job `EnvioDeEmailJob` envia. Se o envio falhar, o job loga o assunto e o destinatário mascarado (`MascaraDeEmail`, como no envio direto, sem o corpo) e deixa a exceção subir para o Hangfire tentar de novo (tentativas automáticas padrão). A mensagem inteira fica gravada nos argumentos do job, com o destinatário em claro, e aparece no painel.
 - **Exceções com token:** `redefinicao_senha` e `confirmacao_email` **não passam pela fila**, porque o token não pode ficar nas tabelas do Hangfire. Eles saem na hora pelo `EnvioDeEmail`; se falhar, loga mascarado e não quebra (veja [E-mail](#e-mail)).
 - **Limpeza:** o job recorrente diário `limpeza-de-notificacoes` (`LimpezaDeNotificacoes`) apaga as notificações com `created_at` de mais de **90 dias**, lidas ou não.
 - **Painel** em `/hangfire`, **só em Development** (e, pelo padrão do Hangfire, só para requisições locais). Em produção o painel não é mapeado.
