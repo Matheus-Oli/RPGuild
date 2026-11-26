@@ -1,5 +1,4 @@
 using FluentValidation;
-using RPGuild.Domain.Contas;
 
 namespace RPGuild.Application.Contas;
 
@@ -7,14 +6,9 @@ public sealed class RegistrarRequestValidator : AbstractValidator<RegistrarReque
 {
     public RegistrarRequestValidator()
     {
-        RuleFor(r => r.Nome)
-            .NotEmpty().WithMessage("Informe o nome.")
-            .MaximumLength(RegrasDeConta.NomeTamanhoMaximo)
-            .WithMessage($"O nome pode ter no máximo {RegrasDeConta.NomeTamanhoMaximo} caracteres.");
+        RuleFor(r => r.Nome).Nome();
 
-        RuleFor(r => r.Nick)
-            .Must(Nick.EhValido)
-            .WithMessage($"O nick deve ter de {Nick.TamanhoMinimo} a {Nick.TamanhoMaximo} caracteres, só letras, números e \"_\".");
+        RuleFor(r => r.Nick).Nick();
 
         RuleFor(r => r.Email).Email();
 
