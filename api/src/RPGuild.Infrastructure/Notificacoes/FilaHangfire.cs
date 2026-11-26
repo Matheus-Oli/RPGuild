@@ -2,6 +2,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using RPGuild.Application.Notificacoes;
 
 namespace RPGuild.Infrastructure.Notificacoes;
@@ -17,12 +18,25 @@ public sealed class HangfireFilaDeEmail(IBackgroundJobClient jobs) : IFilaDeEmai
 }
 
 /// <summary>
-/// Job que envia o e-mail. Se o envio falhar, a exceção sobe e o Hangfire tenta de novo (tentativas automáticas padrão).
+/// Job que envia o e-mail. Se o envio falhar, loga como o envio direto (assunto e destinatário mascarado, sem o corpo)
+/// e deixa a exceção subir para o Hangfire tentar de novo (tentativas automáticas padrão).
 /// </summary>
-public sealed class EnvioDeEmailJob(IEmailSender emails)
+public sealed class EnvioDeEmailJob(IEmailSender emails, ILogger<EnvioDeEmailJob> logger)
 {
-    public Task EnviarAsync(EmailMessage mensagem, CancellationToken cancellationToken) =>
-        emails.EnviarAsync(mensagem, cancellationToken);
+    public async Task EnviarAsync(EmailMessage mensagem, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await emails.EnviarAsync(mensagem, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex, "Falha ao enviar o e-mail \"{Assunto}\" para {Para}; o Hangfire vai tentar de novo",
+                mensagem.Assunto, MascaraDeEmail.Mascarar(mensagem.Para));
+            throw;
+        }
+    }
 }
 
 public static class FilaHangfire
