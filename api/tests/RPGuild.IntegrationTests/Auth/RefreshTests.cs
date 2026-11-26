@@ -33,4 +33,18 @@ public sealed class RefreshTests(PostgresFixture postgres) : IDisposable
         novoCookie.ShouldNotBeNull();
         novoCookie.ShouldNotBe(logado.RefreshCookie);
     }
+
+    [Fact]
+    public async Task Refresh_SemCookie_Retorna401()
+    {
+        // Arrange
+        using var cliente = _factory.CriarCliente();
+
+        // Act
+        var resposta = await cliente.SendAsync(RefreshCookie.Post(Url, cookie: null));
+
+        // Assert
+        resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        resposta.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+    }
 }
