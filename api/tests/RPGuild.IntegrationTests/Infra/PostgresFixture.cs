@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using RPGuild.Infrastructure.Persistence;
+using Respawn;
+using Respawn.Graph;
 using Testcontainers.PostgreSql;
 
 namespace RPGuild.IntegrationTests.Infra;
@@ -34,8 +36,54 @@ public sealed class PostgresFixture : IAsyncLifetime
         await _container.StartAsync();
 
         // MigrateAsync só aplica as migrations pendentes; num container reaproveitado normalmente não há nenhuma.
-        await using var context = CriarDbContext();
-        await context.Database.MigrateAsync();
+        await using (var context = CriarDbContext())
+        {
+            await context.Database.MigrateAsync();
+        }
+
+        await RemoverBancosVaziosAsync();
+        await LimparAsync();
+    }
+
+    /// <summary>
+    /// Apaga os dados de todas as tabelas do banco padrão, menos o histórico de migrations.
+    /// Roda ao subir a fixture; chame também numa classe de teste que precise começar do banco limpo.
+    /// </summary>
+    public async Task LimparAsync()
+    {
+        await using var conexao = new NpgsqlConnection(ConnectionString);
+        await conexao.OpenAsync();
+
+        var respawner = await Respawner.CreateAsync(conexao, new RespawnerOptions
+        {
+            DbAdapter = DbAdapter.Postgres,
+            SchemasToInclude = ["public"],
+            TablesToIgnore = [new Table("__EFMigrationsHistory")],
+        });
+        await respawner.ResetAsync(conexao);
+    }
+
+    // Os bancos criados por CriarBancoVazioAsync se acumulariam no container reaproveitado.
+    private async Task RemoverBancosVaziosAsync()
+    {
+        await using var conexao = new NpgsqlConnection(ConnectionString);
+        await conexao.OpenAsync();
+
+        var nomes = new List<string>();
+        await using (var consulta = new NpgsqlCommand("SELECT datname FROM pg_database WHERE datname LIKE 'vazio\\_%'", conexao))
+        await using (var leitor = await consulta.ExecuteReaderAsync())
+        {
+            while (await leitor.ReadAsync())
+            {
+                nomes.Add(leitor.GetString(0));
+            }
+        }
+
+        foreach (var nome in nomes)
+        {
+            await using var comando = new NpgsqlCommand($"DROP DATABASE \"{nome}\" WITH (FORCE)", conexao);
+            await comando.ExecuteNonQueryAsync();
+        }
     }
 
     // O Dispose de um container reaproveitado o para; deixamos rodando para a próxima execução.
