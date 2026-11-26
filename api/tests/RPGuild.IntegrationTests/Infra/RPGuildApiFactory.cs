@@ -20,13 +20,15 @@ namespace RPGuild.IntegrationTests.Infra;
 /// <param name="usarHangfire">
 /// Liga o Hangfire de verdade (storage no container e server) no lugar da <see cref="FakeFilaDeEmail"/>. Só para os testes da fila.
 /// </param>
+/// <param name="configuracao">Configurações extras da API (ex.: o nível de log de uma categoria).</param>
 public sealed class RPGuildApiFactory(
     string connectionString,
     TimeProvider? relogio = null,
     IEmailSender? emailSender = null,
     TimeSpan? validadeDoTokenDeRedefinicao = null,
     Action<IServiceCollection>? configurarServicos = null,
-    bool usarHangfire = false)
+    bool usarHangfire = false,
+    IReadOnlyDictionary<string, string?>? configuracao = null)
     : WebApplicationFactory<Program>
 {
     public const string FrontBaseUrl = "http://localhost:5173";
@@ -44,8 +46,9 @@ public sealed class RPGuildApiFactory(
         IEmailSender? emailSender = null,
         TimeSpan? validadeDoTokenDeRedefinicao = null,
         Action<IServiceCollection>? configurarServicos = null,
-        bool usarHangfire = false)
-        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao, configurarServicos, usarHangfire)
+        bool usarHangfire = false,
+        IReadOnlyDictionary<string, string?>? configuracao = null)
+        : this(postgres.ConnectionString, relogio, emailSender, validadeDoTokenDeRedefinicao, configurarServicos, usarHangfire, configuracao)
     {
     }
 
@@ -67,6 +70,10 @@ public sealed class RPGuildApiFactory(
         builder.UseSetting("Supabase:ServiceKey", "nao-usada");
         builder.UseSetting("Supabase:Bucket", "imagens");
         builder.UseSetting("Hangfire:Habilitado", usarHangfire ? "true" : "false");
+        foreach (var (chave, valor) in configuracao ?? new Dictionary<string, string?>())
+        {
+            builder.UseSetting(chave, valor);
+        }
 
         builder.ConfigureTestServices(services =>
         {
