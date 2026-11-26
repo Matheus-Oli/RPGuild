@@ -5,7 +5,7 @@ Site fechado para o grupo de RPG de mesa: agenda de sessões, campanhas, fichas 
 ## Estrutura
 
 ```
-/web    Front-end Angular (PrimeNG, TipTap, dice-box, FullCalendar)
+/web    Front-end React + Vite + TypeScript (Tailwind v4, shadcn/ui, TipTap, dice-box, FullCalendar)
 /api    Back-end ASP.NET Core (.NET 10), PostgreSQL, SignalR, Hangfire
 /docs   Documento do projeto, design system e diagramas
 ```
@@ -14,7 +14,7 @@ Site fechado para o grupo de RPG de mesa: agenda de sessões, campanhas, fichas 
 
 | Camada | Tecnologia |
 | --- | --- |
-| Front | Angular + PrimeNG, motor de regras D&D em TypeScript |
+| Front | React + Vite + TypeScript, Tailwind v4 + shadcn/ui, React Bits, TipTap, FullCalendar, dice-box-threejs, motor de regras D&D em TypeScript |
 | Back | ASP.NET Core Web API (.NET 10), EF Core, ASP.NET Identity (JWT + refresh token) |
 | Banco | PostgreSQL |
 | Tempo real | SignalR |
@@ -26,8 +26,9 @@ Site fechado para o grupo de RPG de mesa: agenda de sessões, campanhas, fichas 
 
 ## Documentação
 
+- [Estado atual](docs/estado-atual.md): decisões recentes e ordem de execução. Onde divergir do Documento do projeto, vale este.
 - [Documento do projeto](docs/documento-do-projeto.md): visão, requisitos, regras de negócio, telas, modelo de dados, arquitetura e endpoints.
-- [Design system](docs/design-system/README.md): cores, tipografia, logo e uso com PrimeNG.
+- [Design system](docs/design-system/README.md): cores, tipografia, logo e uso com Tailwind/shadcn.
 - Backlog: quadro RPGuild no Trello.
 
 ## Como rodar
