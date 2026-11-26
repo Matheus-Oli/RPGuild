@@ -33,3 +33,24 @@ Exemplos: `feature/s1-auth-jwt`, `feature/s5-criacao-ficha`, `release/1.0.0`, `h
 ## Versionamento
 
 SemVer (`MAJOR.MINOR.PATCH`), com tag em `main` a cada release (`v1.0.0`).
+
+## TDD
+
+- Ciclo red → green → refactor. Nenhum código de produção sem um teste falhando antes.
+- Regra de domínio/aplicação → `RPGuild.UnitTests`. Endpoint, banco, EF Core → `RPGuild.IntegrationTests` (Postgres real via Testcontainers; precisa do Docker rodando).
+- Nome dos testes: `Metodo_Cenario_ResultadoEsperado` (ex.: `Rolar_JogadorComVisibilidadeOculta_LancaExcecao`). Classe: `<ClasseTestada>Tests`.
+- Estrutura Arrange / Act / Assert, com Shouldly nas asserções e NSubstitute para mocks.
+- Commits do ciclo: `test(<modulo>): ...` no red, `feat(<modulo>): ...` no green, `refactor(<modulo>): ...` no refactor.
+
+## PRs por módulo
+
+- Uma feature branch por módulo do back (`feature/<modulo>`).
+- Vários commits e pushes durante o módulo.
+- PR para `develop` só quando o módulo fecha, com todos os testes verdes.
+
+## Como rodar os testes
+
+```bash
+dotnet test api/RPGuild.sln                                       # tudo (precisa do Docker)
+dotnet test api/RPGuild.sln --filter FullyQualifiedName~UnitTests  # só os unitários, sem Docker
+```

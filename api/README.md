@@ -15,7 +15,8 @@ api/
     RPGuild.Domain/            Entidades, value objects e regras de negócio
     RPGuild.Infrastructure/    Implementações das interfaces: banco, e-mail, storage, jobs
   tests/
-    RPGuild.Tests/             Testes (xUnit) de Application e Domain
+    RPGuild.UnitTests/         Testes unitários (xUnit) de Domain e Application + testes de arquitetura
+    RPGuild.IntegrationTests/  Testes de integração: API via WebApplicationFactory + Postgres (Testcontainers)
 ```
 
 Application e Domain são organizados por módulo: `Contas`, `Taberna`, `Campanhas`, `Fichas`, `Rolagens`, `Sessoes`, `Documentos`, `Notificacoes` e `Conteudo`.
@@ -36,7 +37,8 @@ Api ──────────────► Application ──► Domain
 | Application | Domain |
 | Infrastructure | Application, Domain |
 | Domain | nenhum projeto |
-| Tests | Application, Domain |
+| UnitTests | Domain, Application, Infrastructure (só para os testes de arquitetura) |
+| IntegrationTests | Api, Infrastructure |
 
 - O Domain não conhece nenhuma outra camada nem frameworks.
 - A Application define as interfaces; a Infrastructure as implementa.
@@ -54,3 +56,16 @@ dotnet run --project src/RPGuild.Api
 ```
 
 Os warnings são tratados como erro, então o build só passa limpo.
+
+## Testes
+
+- `RPGuild.UnitTests`: regras de Domain e Application, organizadas por módulo (`Contas/`, `Fichas/`, ...). `Arquitetura/` verifica a regra de dependência entre camadas (NetArchTest).
+- `RPGuild.IntegrationTests`: endpoints, banco e EF Core. `Infra/` tem a `PostgresFixture` (container `postgres:17-alpine`, um por execução, via coleção `Integration`) e a `RPGuildApiFactory` (ambiente `Testing`, `ConnectionStrings:Default` apontando para o container).
+- Bibliotecas: xUnit, Shouldly, NSubstitute, NetArchTest, Testcontainers.
+
+```bash
+dotnet test RPGuild.sln                                       # tudo (precisa do Docker rodando)
+dotnet test RPGuild.sln --filter FullyQualifiedName~UnitTests  # só os unitários, sem Docker
+```
+
+Convenções de TDD em [CONTRIBUTING.md](../CONTRIBUTING.md#tdd).
