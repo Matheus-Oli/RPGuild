@@ -6,6 +6,11 @@ public interface ICampanhaRepository
 {
     Task AdicionarAsync(Campanha campanha, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Põe o usuário como jogador (o aceite do convite).
+    /// </summary>
+    Task AdicionarJogadorAsync(MembroDaCampanha membro, CancellationToken cancellationToken);
+
     Task<Campanha?> BuscarPorIdAsync(Guid campanhaId, CancellationToken cancellationToken);
 
     Task<bool> EhJogadorAsync(Guid campanhaId, Guid userId, CancellationToken cancellationToken);

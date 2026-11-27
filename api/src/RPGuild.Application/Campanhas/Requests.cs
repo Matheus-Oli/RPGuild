@@ -5,7 +5,9 @@ namespace RPGuild.Application.Campanhas;
 /// <param name="Sistema">Slug do sistema (ex.: "dnd2024"); precisa estar ativo. Não muda depois de criada.</param>
 /// <param name="CapaPath">Path devolvido pelo POST /api/uploads/sign (tipo "capa"), na pasta do usuário.</param>
 /// <param name="BannerPath">Path devolvido pelo POST /api/uploads/sign (tipo "banner"), na pasta do usuário.</param>
-public sealed record CriarCampanhaRequest(string Nome, string? Descricao, string Sistema, string? CapaPath, string? BannerPath);
+/// <param name="Convidados">Amigos convidados já na criação (opcional). Os convites saem com a campanha, ou nada é criado.</param>
+public sealed record CriarCampanhaRequest(
+    string Nome, string? Descricao, string Sistema, string? CapaPath, string? BannerPath, IReadOnlyList<Guid>? Convidados = null);
 
 /// <summary>
 /// Não tem sistema: ele não muda depois de criada. Capa ou banner null remove a imagem.
@@ -34,6 +36,10 @@ public static class RegrasDeCampanha
 
     public static IRuleBuilderOptions<T, string?> ImagemDaCampanha<T>(this IRuleBuilder<T, string?> regra) => regra
         .MaximumLength(ImagemPathTamanhoMaximo).WithMessage($"O caminho da imagem pode ter no máximo {ImagemPathTamanhoMaximo} caracteres.");
+
+    public static IRuleBuilderOptions<T, TLista> SemRepetidos<T, TLista>(this IRuleBuilder<T, TLista> regra)
+        where TLista : IReadOnlyCollection<Guid>? => regra
+        .Must(ids => ids is null || ids.Distinct().Count() == ids.Count).WithMessage("A lista tem usuário repetido.");
 }
 
 public sealed class CriarCampanhaRequestValidator : AbstractValidator<CriarCampanhaRequest>
@@ -45,6 +51,7 @@ public sealed class CriarCampanhaRequestValidator : AbstractValidator<CriarCampa
         RuleFor(r => r.Sistema).NotEmpty().WithMessage("Informe o sistema.");
         RuleFor(r => r.CapaPath).ImagemDaCampanha();
         RuleFor(r => r.BannerPath).ImagemDaCampanha();
+        RuleFor(r => r.Convidados).SemRepetidos();
     }
 }
 

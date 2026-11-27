@@ -2,7 +2,6 @@ using Microsoft.Extensions.Time.Testing;
 using RPGuild.Application.Campanhas;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
-using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Campanhas;
 using RPGuild.Domain.Taberna;
@@ -24,7 +23,6 @@ public class ConviteServiceTests
     private readonly ConviteRepositoryFalso _convites = new();
     private readonly AmizadeRepositoryFalso _amizades = new();
     private readonly GradeDeCampanhasRepositoryFalso _grade = new();
-    private readonly INotificador _notificador = Substitute.For<INotificador>();
     private readonly Campanha _campanha = Campanha.Criar(Mestre.Id, 1, "A Mina Perdida", null, null, null, Agora.AddDays(-1));
     private readonly ConviteService _service;
 
@@ -58,7 +56,6 @@ public class ConviteServiceTests
             new TransacaoFalsa(),
             identity,
             Substitute.For<IStorageService>(),
-            _notificador,
             new FakeTimeProvider(Agora));
     }
 
