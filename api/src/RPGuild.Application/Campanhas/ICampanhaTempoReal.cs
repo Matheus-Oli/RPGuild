@@ -10,11 +10,22 @@ public interface ICampanhaTempoReal
     /// Para o grupo da campanha (mestre e jogadores com ela aberta).
     /// </summary>
     Task MembroMudouAsync(MembroMudouEvento evento, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Para o grupo da campanha.
+    /// </summary>
+    Task CampanhaAtualizadaAsync(CampanhaAtualizadaEvento evento, CancellationToken cancellationToken);
 }
 
 /// <param name="Tipo">"entrou" (e, no módulo de saída de player, "saiu").</param>
 /// <param name="Membro">No formato do GET /campaigns/{id}/members.</param>
 public sealed record MembroMudouEvento(Guid CampanhaId, string Tipo, MembroDaCampanhaResponse Membro);
+
+/// <summary>
+/// A campanha como ficou depois de editada. Sem o papel: o evento é igual para o mestre e os jogadores.
+/// </summary>
+public sealed record CampanhaAtualizadaEvento(
+    Guid Id, string Nome, string? Descricao, SistemaDaCampanhaResponse Sistema, string? CapaUrl, string? BannerUrl);
 
 public static class TiposDeMudancaDeMembro
 {

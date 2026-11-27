@@ -15,6 +15,9 @@ public sealed class EventosDaCampanha(ICampanhaTempoReal tempoReal, ILogger<Even
             "membro mudou",
             () => tempoReal.MembroMudouAsync(new MembroMudouEvento(campanhaId, TiposDeMudancaDeMembro.Entrou, membro), cancellationToken));
 
+    public Task CampanhaAtualizadaAsync(CampanhaAtualizadaEvento evento, CancellationToken cancellationToken) =>
+        EmpurrarAsync("campanha atualizada", () => tempoReal.CampanhaAtualizadaAsync(evento, cancellationToken));
+
     private async Task EmpurrarAsync(string evento, Func<Task> empurrar)
     {
         try

@@ -14,6 +14,7 @@ public sealed class CampanhaService(
     ConviteService convites,
     IStorageService storage,
     INotificador notificador,
+    EventosDaCampanha eventos,
     ITransacao transacao,
     TimeProvider relogio,
     ILogger<CampanhaService> logger)
@@ -62,8 +63,8 @@ public sealed class CampanhaService(
     }
 
     /// <summary>
-    /// Só o mestre. O sistema não muda. Capa ou banner trocados ou removidos são apagados do storage, e os jogadores
-    /// recebem o aviso nº 17 se algo mudou.
+    /// Só o mestre. O sistema não muda. Capa ou banner trocados ou removidos são apagados do storage. Se algo mudou, os
+    /// jogadores recebem o aviso nº 17 e o grupo da campanha, o CampaignUpdated.
     /// </summary>
     public async Task<Resultado<CampanhaDetalheResponse>> EditarAsync(
         Guid userId, Guid campanhaId, EditarCampanhaRequest request, CancellationToken cancellationToken)
@@ -93,6 +94,16 @@ public sealed class CampanhaService(
             {
                 await notificador.NotificarAsync(jogador.Pessoa.Id, new CampanhaEditada(campanha.Id, campanha.Nome), cancellationToken);
             }
+
+            await eventos.CampanhaAtualizadaAsync(
+                new CampanhaAtualizadaEvento(
+                    campanha.Id,
+                    campanha.Nome,
+                    campanha.Descricao,
+                    new SistemaDaCampanhaResponse(editada.Sistema.Slug, editada.Sistema.Nome),
+                    Url(campanha.CapaPath),
+                    Url(campanha.BannerPath)),
+                cancellationToken);
         }
 
         return Detalhe(editada, userId);
