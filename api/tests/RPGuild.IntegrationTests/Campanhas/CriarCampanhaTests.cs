@@ -56,6 +56,22 @@ public sealed class CriarCampanhaTests(PostgresFixture postgres) : IDisposable
         (await _factory.OrdemNoBancoAsync(mestre.Id)).ShouldBe([nova.Id, antigas[1], antigas[0]]);
     }
 
+    [Fact]
+    public async Task Criar_FalhaAoGravarAPosicaoNaGrade_Retorna500ENaoDeixaNadaNoBanco()
+    {
+        // Arrange
+        using var factory = new RPGuildApiFactory(postgres, configurarServicos: GradeQueFalhaAoGravar.Registrar);
+        var mestre = await factory.CriarUsuarioELogarAsync();
+
+        // Act
+        var resposta = await factory.CriarAsync(mestre, new { nome = "Campanha", sistema = CampanhasDeTeste.SistemaAtivo });
+
+        // Assert
+        resposta.DeveSerProblema(HttpStatusCode.InternalServerError);
+        (await factory.CampanhasNoBancoAsync(mestre.Id)).ShouldBe(0);
+        (await factory.OrdemNoBancoAsync(mestre.Id)).ShouldBeEmpty();
+    }
+
     [Theory]
     [InlineData("ordem2")]
     [InlineData("deadlands")]
