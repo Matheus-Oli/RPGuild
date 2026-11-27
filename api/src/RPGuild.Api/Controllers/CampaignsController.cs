@@ -8,8 +8,20 @@ namespace RPGuild.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/campaigns")]
-public sealed class CampaignsController(CampanhaService campanhas, GradeDeCampanhas grade) : ControllerBase
+public sealed class CampaignsController(CampanhaService campanhas, ConviteService convites, GradeDeCampanhas grade) : ControllerBase
 {
+    [HttpPost("{id:guid}/invites")]
+    [ProducesResponseType<IReadOnlyList<ConviteDaCampanhaResponse>>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Convidar(Guid id, ConvidarRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await convites.ConvidarAsync(User.Id(), id, request, cancellationToken);
+        return this.ParaResposta(resultado, criados => StatusCode(StatusCodes.Status201Created, criados));
+    }
+
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<CampanhaCardResponse>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(CancellationToken cancellationToken) =>
