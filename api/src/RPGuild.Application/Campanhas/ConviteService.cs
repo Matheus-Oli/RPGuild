@@ -223,7 +223,8 @@ public sealed class ConviteService(
     }
 
     /// <summary>
-    /// Só o mestre, e só pendente. O convidado e os jogadores recebem 403; quem não participa, 404.
+    /// Só o mestre, e só pendente. O convidado e os jogadores recebem 403; quem não participa, 404. O convidado recebe
+    /// o aviso nº 12.
     /// </summary>
     public async Task<Resultado<Vazio>> CancelarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -251,6 +252,7 @@ public sealed class ConviteService(
 
         convite.Cancelar(relogio.GetUtcNow());
         await convites.SalvarAlteracoesAsync(cancellationToken);
+        await notificador.NotificarAsync(convite.UserId, new ConviteCancelado(acesso.Valor!.Id, acesso.Valor.Nome), cancellationToken);
         return Vazio.Valor;
     }
 

@@ -49,4 +49,18 @@ public sealed class CampaignInvitesController(ConviteService convites) : Control
         var resultado = await convites.RecusarAsync(User.Id(), id, cancellationToken);
         return this.ParaResposta(resultado, _ => NoContent());
     }
+
+    /// <summary>
+    /// O mestre cancela um convite pendente.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Cancelar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await convites.CancelarAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
 }

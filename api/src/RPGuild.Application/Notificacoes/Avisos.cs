@@ -55,3 +55,8 @@ public sealed record JogadorEntrou(Guid CampanhaId, string CampanhaNome, Guid Us
 /// <summary>Nº 11, para o mestre, com quem recusou.</summary>
 public sealed record ConviteRecusado(Guid ConviteId, Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
     : Aviso(TiposDeNotificacao.ConviteRecusado);
+
+/// <summary>
+/// Nº 12, para o convidado: o mestre cancelou, a amizade foi desfeita ou a campanha foi excluída.
+/// </summary>
+public sealed record ConviteCancelado(Guid CampanhaId, string CampanhaNome) : Aviso(TiposDeNotificacao.ConviteCancelado);
