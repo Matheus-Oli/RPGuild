@@ -13,8 +13,7 @@ public sealed class UploadService(IStorageService storage)
     /// </summary>
     public async Task<UrlDeUploadResponse> AssinarAsync(Guid userId, AssinarUploadRequest request, CancellationToken cancellationToken)
     {
-        // Por enquanto o único tipo é avatar (veja TiposDeUpload).
-        var path = CaminhoDeAvatar.Gerar(userId, request.ContentType);
+        var path = TiposDeUpload.GerarPath(request.Tipo, userId, request.ContentType);
         var uploadUrl = await storage.CriarUrlDeUploadAsync(path, cancellationToken);
 
         return new UrlDeUploadResponse(uploadUrl, path, storage.ObterUrlPublica(path));
