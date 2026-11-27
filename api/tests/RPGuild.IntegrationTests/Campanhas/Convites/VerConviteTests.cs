@@ -30,8 +30,8 @@ public sealed class VerConviteTests(PostgresFixture postgres) : IDisposable
         card.Campanha.ShouldBe(new CampanhaDoCardResponse(
             campanha.Id, campanha.Nome, campanha.Descricao, new SistemaResponse("dnd2024", "D&D 5e (regras de 2024)"),
             campanha.CapaUrl, campanha.BannerUrl));
-        card.Mestre.ShouldBe(Pessoa(mestre));
-        card.NaMesa.ShouldBe([Pessoa(mestre), Pessoa(jogador)]);
+        card.Mestre.ShouldBe(mestre.ComoPessoa());
+        card.NaMesa.ShouldBe([mestre.ComoPessoa(), jogador.ComoPessoa()]);
         card.ConvidadoPor.ShouldBe(new QuemConvidouResponse(mestre.Dados.Nome, mestre.Dados.Nick));
         card.Para.ShouldBe(new ParaQuemResponse(convidado.Dados.Nick));
         card.CriadoEm.ShouldNotBeNull();
@@ -137,8 +137,6 @@ public sealed class VerConviteTests(PostgresFixture postgres) : IDisposable
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
-
-    private static PessoaDaCampanhaResponse Pessoa(UsuarioLogado usuario) => new(usuario.Id, usuario.Dados.Nome, usuario.Dados.Nick, null);
 
     // Mestre com um jogador na mesa e um amigo convidado (pendente), numa campanha com capa e banner.
     private async Task<(UsuarioLogado Mestre, UsuarioLogado Convidado, UsuarioLogado Jogador, Guid ConviteId, DetalheResponse Campanha)>

@@ -64,7 +64,7 @@ public sealed class CriarComConvidadosTests(PostgresFixture postgres) : IDisposa
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.BadRequest);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe([new ConvidadoInvalidoResponse(estranho.Id, "nao_amigo")]);
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe([new ConvidadoInvalidoResponse(estranho.Id, "nao_amigo")]);
         (await _factory.CampanhasNoBancoAsync(mestre.Id)).ShouldBe(0);
         (await _factory.NotificacoesNoBancoAsync(amigos[0].Id)).ShouldNotContain(n => n.Tipo == "convite_recebido");
         _factory.EmailsPara(amigos[0]).ShouldBe(emailsDoAmigo);
@@ -82,7 +82,7 @@ public sealed class CriarComConvidadosTests(PostgresFixture postgres) : IDisposa
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.BadRequest);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe([new ConvidadoInvalidoResponse(mestre.Id, "mestre")]);
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe([new ConvidadoInvalidoResponse(mestre.Id, "mestre")]);
         (await _factory.CampanhasNoBancoAsync(mestre.Id)).ShouldBe(0);
     }
 
@@ -112,11 +112,5 @@ public sealed class CriarComConvidadosTests(PostgresFixture postgres) : IDisposa
 
         // Assert
         (await _factory.ConvitesNoBancoAsync(campanha.Id)).ShouldBe(0);
-    }
-
-    private static async Task<List<ConvidadoInvalidoResponse>> ConvidadosInvalidosAsync(HttpResponseMessage resposta)
-    {
-        var problema = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync()).RootElement;
-        return problema.GetProperty("convidados").Deserialize<List<ConvidadoInvalidoResponse>>(JsonSerializerOptions.Web)!;
     }
 }

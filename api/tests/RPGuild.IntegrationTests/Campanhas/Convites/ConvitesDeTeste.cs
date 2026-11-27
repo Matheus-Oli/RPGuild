@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Npgsql;
 using RPGuild.Infrastructure.Comum;
 using RPGuild.IntegrationTests.Infra;
@@ -109,6 +110,15 @@ public static class ConvitesDeTeste
         var resposta = await factory.ConvidarAsync(mestre, campanhaId, [.. convidados.Select(c => c.Id)]);
         resposta.StatusCode.ShouldBe(System.Net.HttpStatusCode.Created);
         return (await resposta.Content.ReadFromJsonAsync<List<ConviteDaCampanhaResponse>>())!;
+    }
+
+    /// <summary>
+    /// Os convidados recusados que vieram no ProblemDetails (extensão "convidados").
+    /// </summary>
+    public static async Task<List<ConvidadoInvalidoResponse>> ConvidadosInvalidosAsync(this HttpResponseMessage resposta)
+    {
+        var problema = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync()).RootElement;
+        return problema.GetProperty("convidados").Deserialize<List<ConvidadoInvalidoResponse>>(JsonSerializerOptions.Web)!;
     }
 
     public static Task<HttpResponseMessage> AceitarAsync(this RPGuildApiFactory factory, UsuarioLogado convidado, Guid conviteId) =>

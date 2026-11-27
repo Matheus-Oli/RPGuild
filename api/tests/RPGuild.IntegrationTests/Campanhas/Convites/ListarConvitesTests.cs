@@ -30,8 +30,8 @@ public sealed class ListarConvitesTests(PostgresFixture postgres) : IDisposable
         resposta.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await resposta.Content.ReadFromJsonAsync<List<ConviteDaCampanhaResponse>>())!.ShouldBe(
         [
-            new ConviteDaCampanhaResponse(novo, Pessoa(amigos[1]), agora.AddMinutes(-5)),
-            new ConviteDaCampanhaResponse(antigo, Pessoa(amigos[0]), agora.AddMinutes(-10)),
+            new ConviteDaCampanhaResponse(novo, amigos[1].ComoPessoa(), agora.AddMinutes(-5)),
+            new ConviteDaCampanhaResponse(antigo, amigos[0].ComoPessoa(), agora.AddMinutes(-10)),
         ]);
     }
 
@@ -88,9 +88,9 @@ public sealed class ListarConvitesTests(PostgresFixture postgres) : IDisposable
         var dnd = new SistemaResponse("dnd2024", "D&D 5e (regras de 2024)");
         (await resposta.Content.ReadFromJsonAsync<List<MeuConviteResponse>>())!.ShouldBe(
         [
-            new MeuConviteResponse(novo, new CampanhaDoConviteResponse(segunda.Id, "Maldição de Strahd", dnd, null), Pessoa(mestre), agora.AddMinutes(-5)),
+            new MeuConviteResponse(novo, new CampanhaDoConviteResponse(segunda.Id, "Maldição de Strahd", dnd, null), mestre.ComoPessoa(), agora.AddMinutes(-5)),
             new MeuConviteResponse(
-                antigo, new CampanhaDoConviteResponse(primeira.Id, "A Mina Perdida", dnd, _factory.Storage.ObterUrlPublica(capa)), Pessoa(mestre),
+                antigo, new CampanhaDoConviteResponse(primeira.Id, "A Mina Perdida", dnd, _factory.Storage.ObterUrlPublica(capa)), mestre.ComoPessoa(),
                 agora.AddMinutes(-10)),
         ]);
     }
@@ -139,6 +139,4 @@ public sealed class ListarConvitesTests(PostgresFixture postgres) : IDisposable
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
-
-    private static PessoaDaCampanhaResponse Pessoa(UsuarioLogado usuario) => new(usuario.Id, usuario.Dados.Nome, usuario.Dados.Nick, null);
 }

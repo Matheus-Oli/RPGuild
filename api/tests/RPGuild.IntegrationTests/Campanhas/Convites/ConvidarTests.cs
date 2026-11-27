@@ -49,7 +49,7 @@ public sealed class ConvidarTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.BadRequest);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe([new ConvidadoInvalidoResponse(estranho.Id, "nao_amigo")]);
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe([new ConvidadoInvalidoResponse(estranho.Id, "nao_amigo")]);
         (await _factory.ConvitesNoBancoAsync(campanha.Id)).ShouldBe(0);
         (await _factory.NotificacoesNoBancoAsync(amigos[0].Id)).ShouldNotContain(n => n.Tipo == "convite_recebido");
     }
@@ -66,7 +66,7 @@ public sealed class ConvidarTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.BadRequest);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe([new ConvidadoInvalidoResponse(mestre.Id, "mestre")]);
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe([new ConvidadoInvalidoResponse(mestre.Id, "mestre")]);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class ConvidarTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.Conflict);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe([new ConvidadoInvalidoResponse(amigos[0].Id, "ja_jogador")]);
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe([new ConvidadoInvalidoResponse(amigos[0].Id, "ja_jogador")]);
         (await _factory.ConvitesNoBancoAsync(campanha.Id)).ShouldBe(0);
     }
 
@@ -99,7 +99,7 @@ public sealed class ConvidarTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.Conflict);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe([new ConvidadoInvalidoResponse(amigos[0].Id, "ja_convidado")]);
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe([new ConvidadoInvalidoResponse(amigos[0].Id, "ja_convidado")]);
         (await _factory.ConvitesNoBancoAsync(campanha.Id)).ShouldBe(1);
     }
 
@@ -117,7 +117,7 @@ public sealed class ConvidarTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.DeveSerProblema(HttpStatusCode.BadRequest);
-        (await ConvidadosInvalidosAsync(resposta)).ShouldBe(
+        (await resposta.ConvidadosInvalidosAsync()).ShouldBe(
         [
             new ConvidadoInvalidoResponse(amigos[0].Id, "ja_jogador"),
             new ConvidadoInvalidoResponse(estranho.Id, "nao_amigo"),
@@ -183,11 +183,5 @@ public sealed class ConvidarTests(PostgresFixture postgres) : IDisposable
 
         // Assert
         resposta.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-    }
-
-    private static async Task<List<ConvidadoInvalidoResponse>> ConvidadosInvalidosAsync(HttpResponseMessage resposta)
-    {
-        var problema = JsonDocument.Parse(await resposta.Content.ReadAsStringAsync()).RootElement;
-        return problema.GetProperty("convidados").Deserialize<List<ConvidadoInvalidoResponse>>(JsonSerializerOptions.Web)!;
     }
 }

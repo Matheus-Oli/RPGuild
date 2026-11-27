@@ -134,6 +134,12 @@ public static class CampanhasDeTeste
     }
 
     /// <summary>
+    /// O usuário como aparece nas respostas de campanha (sem avatar).
+    /// </summary>
+    public static PessoaDaCampanhaResponse ComoPessoa(this UsuarioLogado usuario) =>
+        new(usuario.Id, usuario.Dados.Nome, usuario.Dados.Nick, null);
+
+    /// <summary>
     /// Path de capa ou banner novo na pasta do usuário, como o que o POST /api/uploads/sign gera.
     /// </summary>
     public static string NovaImagemDeCampanha(this UsuarioLogado logado) => $"campaigns/{logado.Id}/{Guid.NewGuid()}.png";
