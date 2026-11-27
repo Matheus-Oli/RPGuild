@@ -170,7 +170,8 @@ public sealed class ConviteService(
     }
 
     /// <summary>
-    /// Só o convidado, e só pendente. Vira jogador e a campanha entra no início da grade dele, tudo junto.
+    /// Só o convidado, e só pendente. Vira jogador e a campanha entra no início da grade dele, tudo junto. Depois, o
+    /// mestre recebe o aviso nº 10 e os outros jogadores, o nº 13.
     /// </summary>
     public async Task<Resultado<Vazio>> AceitarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -191,6 +192,7 @@ public sealed class ConviteService(
             },
             cancellationToken);
 
+        await AvisarEntradaAsync(convite.Valor!, cancellationToken);
         return Vazio.Valor;
     }
 
@@ -240,6 +242,27 @@ public sealed class ConviteService(
         convite.Cancelar(relogio.GetUtcNow());
         await convites.SalvarAlteracoesAsync(cancellationToken);
         return Vazio.Valor;
+    }
+
+    // Com os nomes de agora: a campanha, o mestre e quem entrou.
+    private async Task AvisarEntradaAsync(ConviteDeCampanha convite, CancellationToken cancellationToken)
+    {
+        var campanha = await campanhas.BuscarComPessoasAsync(convite.CampaignId, cancellationToken);
+        if (campanha is null)
+        {
+            return;
+        }
+
+        var quem = await PessoaGuardadaAsync(convite.UserId, cancellationToken);
+        var nome = campanha.Campanha.Nome;
+        await notificador.NotificarAsync(
+            campanha.Campanha.OwnerId, new ConviteAceito(convite.Id, campanha.Campanha.Id, nome, quem.Id, quem.Nome, quem.Nick), cancellationToken);
+
+        foreach (var jogador in campanha.Jogadores.Where(j => j.Pessoa.Id != quem.Id))
+        {
+            await notificador.NotificarAsync(
+                jogador.Pessoa.Id, new JogadorEntrou(campanha.Campanha.Id, nome, quem.Id, quem.Nome, quem.Nick), cancellationToken);
+        }
     }
 
     // Para quem não é o convidado, o convite "não existe" (404).

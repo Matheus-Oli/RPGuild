@@ -29,4 +29,14 @@ public sealed class CampaignInvitesController(ConviteService convites) : Control
         // Pelo tipo concreto: cada perfil vê só os campos do seu card.
         return this.ParaResposta(resultado, card => Ok((object)card));
     }
+
+    [HttpPost("{id:guid}/accept")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Aceitar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await convites.AceitarAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
 }

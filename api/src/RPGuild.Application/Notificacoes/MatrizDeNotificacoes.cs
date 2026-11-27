@@ -16,6 +16,8 @@ public static class TiposDeNotificacao
     public const string CampanhaEditada = "campanha_editada";
     public const string CampanhaExcluida = "campanha_excluida";
     public const string ConviteRecebido = "convite_recebido";
+    public const string ConviteAceito = "convite_aceito";
+    public const string JogadorEntrou = "jogador_entrou";
 }
 
 public enum EnvioPorEmail
@@ -54,6 +56,8 @@ public static class MatrizDeNotificacoes
         [TiposDeNotificacao.CampanhaEditada] = new(Sininho: true, EnvioPorEmail.Nenhum),
         [TiposDeNotificacao.CampanhaExcluida] = new(Sininho: true, EnvioPorEmail.Fila),
         [TiposDeNotificacao.ConviteRecebido] = new(Sininho: true, EnvioPorEmail.Fila),
+        [TiposDeNotificacao.ConviteAceito] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.JogadorEntrou] = new(Sininho: true, EnvioPorEmail.Fila),
     };
 
     public static CanaisDaNotificacao CanaisDe(string tipo) =>

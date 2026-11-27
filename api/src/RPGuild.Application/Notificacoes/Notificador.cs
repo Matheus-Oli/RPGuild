@@ -82,6 +82,8 @@ public sealed class Notificador(
         AmizadeRecebida pedido => EmailTemplates.PedidoDeAmizade(nome, para, pedido.DeNome, pedido.DeNick, Link("taberna")),
         ConviteRecebido convite => EmailTemplates.ConviteDeCampanha(
             nome, para, convite.CampanhaNome, convite.MestreNome, convite.MestreNick, Link($"convites/{convite.ConviteId}")),
+        JogadorEntrou entrou => EmailTemplates.JogadorEntrou(
+            nome, para, entrou.CampanhaNome, entrou.Nome, entrou.Nick, Link($"campanhas/{entrou.CampanhaId}")),
         CampanhaExcluida excluida => EmailTemplates.CampanhaExcluida(nome, para, excluida.CampanhaNome, excluida.MestreNome),
         _ => throw new InvalidOperationException($"O tipo \"{aviso.Tipo}\" tem e-mail na matriz, mas não tem modelo de e-mail."),
     };

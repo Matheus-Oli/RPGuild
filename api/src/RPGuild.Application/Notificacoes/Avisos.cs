@@ -43,3 +43,11 @@ public sealed record CampanhaExcluida(string CampanhaNome, string MestreNome) : 
 /// <summary>Nº 9, para o convidado, com o mestre de agora.</summary>
 public sealed record ConviteRecebido(Guid ConviteId, Guid CampanhaId, string CampanhaNome, string MestreNome, string MestreNick)
     : Aviso(TiposDeNotificacao.ConviteRecebido);
+
+/// <summary>Nº 10, para o mestre, com quem aceitou.</summary>
+public sealed record ConviteAceito(Guid ConviteId, Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
+    : Aviso(TiposDeNotificacao.ConviteAceito);
+
+/// <summary>Nº 13, para os outros jogadores (nem quem entrou, nem o mestre), com quem entrou.</summary>
+public sealed record JogadorEntrou(Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
+    : Aviso(TiposDeNotificacao.JogadorEntrou);
