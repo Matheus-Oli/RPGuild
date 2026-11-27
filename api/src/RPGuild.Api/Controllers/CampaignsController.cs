@@ -8,7 +8,7 @@ namespace RPGuild.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/campaigns")]
-public sealed class CampaignsController(CampanhaService campanhas) : ControllerBase
+public sealed class CampaignsController(CampanhaService campanhas, GradeDeCampanhas grade) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<CampanhaCardResponse>>(StatusCodes.Status200OK)]
@@ -22,5 +22,14 @@ public sealed class CampaignsController(CampanhaService campanhas) : ControllerB
     {
         var resultado = await campanhas.CriarAsync(User.Id(), request, cancellationToken);
         return this.ParaResposta(resultado, detalhe => Created($"/api/campaigns/{detalhe.Id}", detalhe));
+    }
+
+    [HttpPut("order")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Ordenar(OrdenarCampanhasRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await grade.ReordenarAsync(User.Id(), request.CampaignIds, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
     }
 }
