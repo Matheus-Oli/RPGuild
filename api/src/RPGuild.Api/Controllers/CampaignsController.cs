@@ -10,6 +10,16 @@ namespace RPGuild.Api.Controllers;
 [Route("api/campaigns")]
 public sealed class CampaignsController(CampanhaService campanhas, ConviteService convites, GradeDeCampanhas grade) : ControllerBase
 {
+    [HttpGet("{id:guid}/invites")]
+    [ProducesResponseType<IReadOnlyList<ConviteDaCampanhaResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Convites(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await convites.ListarDaCampanhaAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, pendentes => Ok(pendentes));
+    }
+
     [HttpPost("{id:guid}/invites")]
     [ProducesResponseType<IReadOnlyList<ConviteDaCampanhaResponse>>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

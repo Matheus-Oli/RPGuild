@@ -63,6 +63,34 @@ public sealed class ConviteService(
     }
 
     /// <summary>
+    /// Os convites pendentes da campanha, os mais novos primeiro. Só o mestre.
+    /// </summary>
+    public async Task<Resultado<ConviteDaCampanhaResponse[]>> ListarDaCampanhaAsync(
+        Guid userId, Guid campanhaId, CancellationToken cancellationToken)
+    {
+        var acesso = await acessos.DeMestreAsync(userId, campanhaId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!;
+        }
+
+        var pendentes = await convites.ListarPendentesDaCampanhaAsync(campanhaId, cancellationToken);
+        return pendentes.Select(c => new ConviteDaCampanhaResponse(c.Id, Pessoa(c.Convidado), c.CriadoEm)).ToArray();
+    }
+
+    /// <summary>
+    /// Os convites pendentes que o usuário recebeu, os mais novos primeiro.
+    /// </summary>
+    public async Task<IReadOnlyList<MeuConviteResponse>> ListarMeusAsync(Guid userId, CancellationToken cancellationToken) =>
+    [
+        .. (await convites.ListarPendentesDoUsuarioAsync(userId, cancellationToken)).Select(c => new MeuConviteResponse(
+            c.Id,
+            new CampanhaDoConviteResponse(c.CampanhaId, c.CampanhaNome, new SistemaDaCampanhaResponse(c.Sistema.Slug, c.Sistema.Nome), Url(c.CapaPath)),
+            Pessoa(c.Mestre),
+            c.CriadoEm)),
+    ];
+
+    /// <summary>
     /// Confere a lista inteira e devolve o erro com todos os recusados, ou null. 400 vence 409.
     /// </summary>
     public async Task<Erro?> ValidarAsync(
@@ -208,11 +236,14 @@ public sealed class ConviteService(
     private async Task<bool> SaoAmigosAsync(Guid mestreId, Guid userId, CancellationToken cancellationToken) =>
         await amizades.BuscarDoParAsync(mestreId, userId, cancellationToken) is { Status: StatusDaAmizade.Aceita };
 
+    private PessoaDaCampanhaResponse Pessoa(PessoaGuardada pessoa) => new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath));
+
+    private string? Url(string? path) => path is null ? null : storage.ObterUrlPublica(path);
+
     private async Task<PessoaDaCampanhaResponse> PessoaAsync(Guid userId, CancellationToken cancellationToken)
     {
         var perfil = await identity.BuscarPerfilAsync(userId, cancellationToken)
             ?? throw new InvalidOperationException($"O usuário {userId} sumiu no meio da requisição.");
-        return new PessoaDaCampanhaResponse(
-            perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath is null ? null : storage.ObterUrlPublica(perfil.AvatarPath));
+        return new PessoaDaCampanhaResponse(perfil.Id, perfil.Nome, perfil.Nick, Url(perfil.AvatarPath));
     }
 }

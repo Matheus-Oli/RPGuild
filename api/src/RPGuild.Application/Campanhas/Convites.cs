@@ -20,6 +20,24 @@ public sealed class ConvidarRequestValidator : AbstractValidator<ConvidarRequest
 
 public sealed record ConviteDaCampanhaResponse(Guid Id, PessoaDaCampanhaResponse Convidado, DateTimeOffset CriadoEm);
 
+public sealed record CampanhaDoConviteResponse(Guid Id, string Nome, SistemaDaCampanhaResponse Sistema, string? CapaUrl);
+
+/// <summary>
+/// Um convite pendente que eu recebi. Nunca leva e-mail.
+/// </summary>
+public sealed record MeuConviteResponse(Guid Id, CampanhaDoConviteResponse Campanha, PessoaDaCampanhaResponse Mestre, DateTimeOffset CriadoEm);
+
+/// <summary>
+/// Convite pendente com o convidado, como está guardado.
+/// </summary>
+public sealed record ConviteComConvidado(Guid Id, PessoaGuardada Convidado, DateTimeOffset CriadoEm);
+
+/// <summary>
+/// Convite pendente recebido, com a campanha e o mestre, como está guardado.
+/// </summary>
+public sealed record ConviteGuardado(
+    Guid Id, Guid CampanhaId, string CampanhaNome, SistemaDeJogo Sistema, string? CapaPath, PessoaGuardada Mestre, DateTimeOffset CriadoEm);
+
 /// <param name="Motivo">Um dos <see cref="MotivosDeConvite"/>.</param>
 public sealed record ConvidadoInvalido(Guid UserId, string Motivo);
 
@@ -47,6 +65,16 @@ public interface IConviteRepository
     Task<ConviteDeCampanha?> BuscarPorIdAsync(Guid conviteId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<ConviteDeCampanha>> PendentesDaCampanhaAsync(Guid campanhaId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Os pendentes da campanha com o convidado, os mais novos primeiro.
+    /// </summary>
+    Task<IReadOnlyList<ConviteComConvidado>> ListarPendentesDaCampanhaAsync(Guid campanhaId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Os pendentes que o usuário recebeu, com a campanha e o mestre, os mais novos primeiro.
+    /// </summary>
+    Task<IReadOnlyList<ConviteGuardado>> ListarPendentesDoUsuarioAsync(Guid userId, CancellationToken cancellationToken);
 
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);
 }
