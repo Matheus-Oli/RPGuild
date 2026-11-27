@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using RPGuild.Infrastructure.Comum;
 using RPGuild.IntegrationTests.Infra;
-using RPGuild.IntegrationTests.Taberna;
 
 namespace RPGuild.IntegrationTests.Campanhas;
 

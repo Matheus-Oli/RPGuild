@@ -127,12 +127,6 @@ public static class CampanhasDeTeste
 
     public static string Membros(Guid campanhaId) => $"{Campanha(campanhaId)}/members";
 
-    public static async Task<HttpResponseMessage> GetAsync(this RPGuildApiFactory factory, UsuarioLogado logado, string url)
-    {
-        using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
-        return await cliente.GetAsync(url);
-    }
-
     public static async Task<HttpResponseMessage> EditarAsync(this RPGuildApiFactory factory, UsuarioLogado logado, Guid campanhaId, object corpo)
     {
         using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
@@ -181,13 +175,6 @@ public static class CampanhasDeTeste
         using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
         return await cliente.PutAsJsonAsync($"{Url}/order", new { campaignIds });
     }
-
-    /// <summary>
-    /// Quantos e-mails o usuário recebeu até agora, pela fila ou direto.
-    /// </summary>
-    public static int EmailsPara(this RPGuildApiFactory factory, UsuarioLogado usuario) =>
-        factory.Fila.Enfileiradas.Count(m => m.Para == usuario.Dados.Email)
-        + factory.Emails.Enviadas.Count(m => m.Para == usuario.Dados.Email);
 
     public static async Task<List<CardResponse>> CampanhasDeAsync(this RPGuildApiFactory factory, UsuarioLogado logado)
     {

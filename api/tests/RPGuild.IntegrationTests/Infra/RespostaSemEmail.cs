@@ -1,10 +1,8 @@
 using System.Text.Json;
-using RPGuild.IntegrationTests.Infra;
-
-namespace RPGuild.IntegrationTests.Taberna;
+namespace RPGuild.IntegrationTests.Infra;
 
 /// <summary>
-/// As listas da Taberna nunca expõem e-mail: nem propriedade "email" em nível nenhum, nem o endereço em algum valor.
+/// As respostas com outras pessoas (Taberna, campanhas) nunca expõem e-mail: nem propriedade "email" em nível nenhum, nem o endereço em algum valor.
 /// </summary>
 public static class RespostaSemEmail
 {

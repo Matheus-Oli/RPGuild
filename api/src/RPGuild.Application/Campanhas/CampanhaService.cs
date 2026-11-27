@@ -39,9 +39,7 @@ public sealed class CampanhaService(
         await campanhas.SalvarAlteracoesAsync(cancellationToken);
         await grade.ColocarNoInicioAsync(userId, campanha.Id, cancellationToken);
 
-        var criada = await campanhas.BuscarComPessoasAsync(campanha.Id, cancellationToken)
-            ?? throw new InvalidOperationException($"A campanha {campanha.Id} sumiu logo depois de criada.");
-        return Detalhe(criada, userId);
+        return Detalhe(await RecarregarAsync(campanha.Id, cancellationToken), userId);
     }
 
     /// <summary>
@@ -69,8 +67,7 @@ public sealed class CampanhaService(
 
         await ApagarImagensAsync(imagensAntigas.Where(path => path != campanha.CapaPath && path != campanha.BannerPath), cancellationToken);
 
-        var editada = await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken)
-            ?? throw new InvalidOperationException($"A campanha {campanhaId} sumiu logo depois de editada.");
+        var editada = await RecarregarAsync(campanhaId, cancellationToken);
         if (mudou)
         {
             foreach (var jogador in editada.Jogadores)
@@ -102,8 +99,7 @@ public sealed class CampanhaService(
         }
 
         // Os jogadores e o nome do mestre, antes que o cascade apague os membros.
-        var guardada = await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken)
-            ?? throw new InvalidOperationException($"A campanha {campanhaId} sumiu antes de ser excluída.");
+        var guardada = await RecarregarAsync(campanhaId, cancellationToken);
 
         campanhas.Remover(campanha);
         await campanhas.SalvarAlteracoesAsync(cancellationToken);
@@ -160,6 +156,11 @@ public sealed class CampanhaService(
             ? guardada
             : ErrosDeCampanha.CampanhaNaoEncontrada;
     }
+
+    // A campanha com as pessoas, logo depois de o acesso confirmar que ela existe.
+    private async Task<CampanhaGuardada> RecarregarAsync(Guid campanhaId, CancellationToken cancellationToken) =>
+        await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken)
+            ?? throw new InvalidOperationException($"A campanha {campanhaId} sumiu no meio da requisição.");
 
     // A campanha já foi salva: um arquivo órfão no bucket não justifica falhar a requisição.
     private async Task ApagarImagensAsync(IEnumerable<string?> paths, CancellationToken cancellationToken)
