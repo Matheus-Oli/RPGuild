@@ -36,3 +36,6 @@ public sealed record AmizadeRecusada(Guid UserId, string Nome, string Nick) : Av
 
 /// <summary>Nº 17, para os jogadores, com o nome depois da edição.</summary>
 public sealed record CampanhaEditada(Guid CampanhaId, string CampanhaNome) : Aviso(TiposDeNotificacao.CampanhaEditada);
+
+/// <summary>Nº 18, para os jogadores. Sem o id: a campanha não existe mais.</summary>
+public sealed record CampanhaExcluida(string CampanhaNome, string MestreNome) : Aviso(TiposDeNotificacao.CampanhaExcluida);

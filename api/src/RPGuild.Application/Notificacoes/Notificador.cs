@@ -80,6 +80,7 @@ public sealed class Notificador(
         EmailAlterado alterado => EmailTemplates.EmailAlterado(nome, para, alterado.EmailNovo),
         ConfirmacaoDeEmail confirmacao => EmailTemplates.ConfirmacaoDeNovoEmail(nome, para, confirmacao.Link),
         AmizadeRecebida pedido => EmailTemplates.PedidoDeAmizade(nome, para, pedido.DeNome, pedido.DeNick, Link("taberna")),
+        CampanhaExcluida excluida => EmailTemplates.CampanhaExcluida(nome, para, excluida.CampanhaNome, excluida.MestreNome),
         _ => throw new InvalidOperationException($"O tipo \"{aviso.Tipo}\" tem e-mail na matriz, mas não tem modelo de e-mail."),
     };
 

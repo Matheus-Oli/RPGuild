@@ -56,6 +56,8 @@ public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository
         ];
     }
 
+    public void Remover(Campanha campanha) => db.Campanhas.Remove(campanha);
+
     public Task SalvarAlteracoesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 
     // Os jogadores de cada campanha, do que entrou primeiro para o último.

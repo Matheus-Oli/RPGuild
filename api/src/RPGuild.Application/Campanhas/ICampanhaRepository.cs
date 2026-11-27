@@ -17,5 +17,10 @@ public interface ICampanhaRepository
     /// </summary>
     Task<IReadOnlyList<CampanhaGuardada>> ListarDoUsuarioAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Apaga a campanha; os jogadores e as posições nas grades vão junto (cascade no banco).
+    /// </summary>
+    void Remover(Campanha campanha);
+
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);
 }

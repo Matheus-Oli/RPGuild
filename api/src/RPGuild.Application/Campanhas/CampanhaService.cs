@@ -82,6 +82,42 @@ public sealed class CampanhaService(
         return Detalhe(editada, userId);
     }
 
+    /// <summary>
+    /// Só o mestre, com o nome da campanha e a frase de confirmação. Apaga a campanha com os jogadores e as posições
+    /// nas grades, apaga capa e banner do storage e avisa os jogadores (nº 18).
+    /// </summary>
+    public async Task<Resultado<Vazio>> ExcluirAsync(
+        Guid userId, Guid campanhaId, ExcluirCampanhaRequest request, CancellationToken cancellationToken)
+    {
+        var acesso = await acessos.DeMestreAsync(userId, campanhaId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!;
+        }
+
+        var campanha = acesso.Valor!;
+        if (!ConfirmacaoDeExclusao.Confere(campanha.Nome, request.ConfirmacaoNome, request.ConfirmacaoFrase))
+        {
+            return ErrosDeCampanha.ConfirmacaoIncorreta;
+        }
+
+        // Os jogadores e o nome do mestre, antes que o cascade apague os membros.
+        var guardada = await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken)
+            ?? throw new InvalidOperationException($"A campanha {campanhaId} sumiu antes de ser excluída.");
+
+        campanhas.Remover(campanha);
+        await campanhas.SalvarAlteracoesAsync(cancellationToken);
+
+        await ApagarImagensAsync([campanha.CapaPath, campanha.BannerPath], cancellationToken);
+        foreach (var jogador in guardada.Jogadores)
+        {
+            await notificador.NotificarAsync(
+                jogador.Pessoa.Id, new CampanhaExcluida(campanha.Nome, guardada.Mestre.Nome), cancellationToken);
+        }
+
+        return Vazio.Valor;
+    }
+
     public async Task<IReadOnlyList<CampanhaCardResponse>> ListarAsync(Guid userId, CancellationToken cancellationToken) =>
         [.. (await campanhas.ListarDoUsuarioAsync(userId, cancellationToken)).Select(c => Card(c, userId))];
 

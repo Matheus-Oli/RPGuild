@@ -93,6 +93,18 @@ public static class EmailTemplates
         {Assinatura}
         """);
 
+    // Aviso nº 18. Sem link: a campanha não existe mais.
+    public static EmailMessage CampanhaExcluida(string nome, string email, string nomeDaCampanha, string nomeDoMestre) => new(
+        email,
+        $"A campanha {nomeDaCampanha} foi excluída",
+        $"""
+        Olá, {nome}!
+
+        {nomeDoMestre} excluiu a campanha {nomeDaCampanha} na RPGuild. Ela não aparece mais na sua lista de campanhas.
+
+        {Assinatura}
+        """);
+
     private static string Duracao(TimeSpan duracao)
     {
         var horas = (int)duracao.TotalHours;

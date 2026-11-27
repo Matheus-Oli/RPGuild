@@ -53,6 +53,17 @@ public sealed class CampaignsController(CampanhaService campanhas, GradeDeCampan
         return this.ParaResposta(resultado, detalhe => Ok(detalhe));
     }
 
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Excluir(Guid id, ExcluirCampanhaRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await campanhas.ExcluirAsync(User.Id(), id, request, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
+
     [HttpPut("order")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
