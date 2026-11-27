@@ -120,4 +120,38 @@ public class EmailTemplatesTests
         mensagem.Texto.ShouldContain(Nome);
         mensagem.Texto.ShouldContain("Muirenn Folha-Alta excluiu a campanha A Mina Perdida");
     }
+
+    [Fact]
+    public void ConviteDeCampanha_Mestre_TemOAssuntoONomeArrobaNickEOLinkDoConvite()
+    {
+        // Arrange
+        const string link = "http://localhost:5173/convites/0193";
+
+        // Act
+        var mensagem = EmailTemplates.ConviteDeCampanha(Nome, Email, "A Mina Perdida", "Muirenn Folha-Alta", "muirenn", link);
+
+        // Assert
+        mensagem.Para.ShouldBe(Email);
+        mensagem.Assunto.ShouldBe("Muirenn Folha-Alta te convidou para a campanha A Mina Perdida");
+        mensagem.Texto.ShouldContain(Nome);
+        mensagem.Texto.ShouldContain("Muirenn Folha-Alta (@muirenn) te convidou para jogar a campanha A Mina Perdida na RPGuild.");
+        mensagem.Texto.ShouldContain(link);
+    }
+
+    [Fact]
+    public void JogadorEntrou_Jogador_TemOAssuntoONomeArrobaNickEOLinkDaCampanha()
+    {
+        // Arrange
+        const string link = "http://localhost:5173/campanhas/0193";
+
+        // Act
+        var mensagem = EmailTemplates.JogadorEntrou(Nome, Email, "A Mina Perdida", "Thorin Escudo", "thorin", link);
+
+        // Assert
+        mensagem.Para.ShouldBe(Email);
+        mensagem.Assunto.ShouldBe("Thorin Escudo entrou na campanha A Mina Perdida");
+        mensagem.Texto.ShouldContain(Nome);
+        mensagem.Texto.ShouldContain("Thorin Escudo (@thorin) entrou na campanha A Mina Perdida.");
+        mensagem.Texto.ShouldContain(link);
+    }
 }
