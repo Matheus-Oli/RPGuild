@@ -93,6 +93,36 @@ public static class EmailTemplates
         {Assinatura}
         """);
 
+    // Aviso nº 9. Leva o @nick do mestre, nunca o e-mail; o link abre o card do convite.
+    public static EmailMessage ConviteDeCampanha(
+        string nome, string email, string nomeDaCampanha, string nomeDoMestre, string nickDoMestre, string link) => new(
+        email,
+        $"{nomeDoMestre} te convidou para a campanha {nomeDaCampanha}",
+        $"""
+        Olá, {nome}!
+
+        {nomeDoMestre} (@{nickDoMestre}) te convidou para jogar a campanha {nomeDaCampanha} na RPGuild. Para ver o convite e responder, abra o link abaixo:
+
+        {link}
+
+        {Assinatura}
+        """);
+
+    // Aviso nº 13, para os outros jogadores. Leva o @nick de quem entrou, nunca o e-mail.
+    public static EmailMessage JogadorEntrou(
+        string nome, string email, string nomeDaCampanha, string nomeDoJogador, string nickDoJogador, string link) => new(
+        email,
+        $"{nomeDoJogador} entrou na campanha {nomeDaCampanha}",
+        $"""
+        Olá, {nome}!
+
+        {nomeDoJogador} (@{nickDoJogador}) entrou na campanha {nomeDaCampanha}. Para ver a mesa, abra a campanha:
+
+        {link}
+
+        {Assinatura}
+        """);
+
     // Aviso nº 18. Sem link: a campanha não existe mais.
     public static EmailMessage CampanhaExcluida(string nome, string email, string nomeDaCampanha, string nomeDoMestre) => new(
         email,
