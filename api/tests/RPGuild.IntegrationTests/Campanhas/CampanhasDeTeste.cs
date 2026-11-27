@@ -90,6 +90,39 @@ public static class CampanhasDeTeste
         await transacao.CommitAsync();
     }
 
+    /// <summary>
+    /// A grade do usuário como está no banco (campaign_user_order), da primeira posição para a última.
+    /// </summary>
+    public static async Task<List<Guid>> OrdemNoBancoAsync(this RPGuildApiFactory factory, Guid userId)
+    {
+        await using var conexao = new NpgsqlConnection(factory.ConnectionString);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand(
+            "SELECT campaign_id FROM campaign_user_order WHERE user_id = @user ORDER BY posicao", conexao);
+        comando.Parameters.AddWithValue("user", userId);
+
+        var ordem = new List<Guid>();
+        await using var leitor = await comando.ExecuteReaderAsync();
+        while (await leitor.ReadAsync())
+        {
+            ordem.Add(leitor.GetGuid(0));
+        }
+
+        return ordem;
+    }
+
+    /// <summary>
+    /// Quantas campanhas existem no banco com este mestre.
+    /// </summary>
+    public static async Task<long> CampanhasNoBancoAsync(this RPGuildApiFactory factory, Guid mestreId)
+    {
+        await using var conexao = new NpgsqlConnection(factory.ConnectionString);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand("SELECT count(*) FROM campaigns WHERE owner_id = @mestre", conexao);
+        comando.Parameters.AddWithValue("mestre", mestreId);
+        return (long)(await comando.ExecuteScalarAsync())!;
+    }
+
     public static async Task<List<CardResponse>> CampanhasDeAsync(this RPGuildApiFactory factory, UsuarioLogado logado)
     {
         using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
