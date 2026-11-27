@@ -19,14 +19,15 @@ public sealed class GradeDeCampanhasRepository(AppDbContext db) : IGradeDeCampan
             .Union(db.MembrosDeCampanha.Where(m => m.UserId == userId).Select(m => m.CampaignId))
             .ToListAsync(cancellationToken);
 
-    public async Task GravarOrdemAsync(Guid userId, IReadOnlyList<Guid> ordem, CancellationToken cancellationToken)
-    {
-        await using var transacao = await db.Database.BeginTransactionAsync(cancellationToken);
-
-        await db.OrdemDasCampanhas.Where(p => p.UserId == userId).ExecuteDeleteAsync(cancellationToken);
-        await db.OrdemDasCampanhas.AddRangeAsync(ordem.Select((campanhaId, posicao) => new PosicaoNaGrade(userId, campanhaId, posicao)), cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-
-        await transacao.CommitAsync(cancellationToken);
-    }
+    // Numa transação própria, ou na de quem chamou (a criação da campanha grava a campanha e a ordem juntas).
+    public Task GravarOrdemAsync(Guid userId, IReadOnlyList<Guid> ordem, CancellationToken cancellationToken) =>
+        new TransacaoDoBanco(db).ExecutarAsync(
+            async () =>
+            {
+                await db.OrdemDasCampanhas.Where(p => p.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+                await db.OrdemDasCampanhas.AddRangeAsync(
+                    ordem.Select((campanhaId, posicao) => new PosicaoNaGrade(userId, campanhaId, posicao)), cancellationToken);
+                await db.SaveChangesAsync(cancellationToken);
+            },
+            cancellationToken);
 }

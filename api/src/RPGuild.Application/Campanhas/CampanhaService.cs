@@ -13,11 +13,13 @@ public sealed class CampanhaService(
     AcessoACampanha acessos,
     IStorageService storage,
     INotificador notificador,
+    ITransacao transacao,
     TimeProvider relogio,
     ILogger<CampanhaService> logger)
 {
     /// <summary>
-    /// Quem cria é o mestre, e a campanha entra no início da grade dele. O request já chega validado.
+    /// Quem cria é o mestre, e a campanha entra no início da grade dele, na mesma transação: se a posição falhar,
+    /// a campanha não é criada. O request já chega validado.
     /// </summary>
     public async Task<Resultado<CampanhaDetalheResponse>> CriarAsync(
         Guid userId, CriarCampanhaRequest request, CancellationToken cancellationToken)
@@ -35,9 +37,14 @@ public sealed class CampanhaService(
 
         var campanha = Campanha.Criar(
             userId, sistema.Id, request.Nome.Trim(), request.Descricao, request.CapaPath, request.BannerPath, relogio.GetUtcNow());
-        await campanhas.AdicionarAsync(campanha, cancellationToken);
-        await campanhas.SalvarAlteracoesAsync(cancellationToken);
-        await grade.ColocarNoInicioAsync(userId, campanha.Id, cancellationToken);
+        await transacao.ExecutarAsync(
+            async () =>
+            {
+                await campanhas.AdicionarAsync(campanha, cancellationToken);
+                await campanhas.SalvarAlteracoesAsync(cancellationToken);
+                await grade.ColocarNoInicioAsync(userId, campanha.Id, cancellationToken);
+            },
+            cancellationToken);
 
         return Detalhe(await RecarregarAsync(campanha.Id, cancellationToken), userId);
     }

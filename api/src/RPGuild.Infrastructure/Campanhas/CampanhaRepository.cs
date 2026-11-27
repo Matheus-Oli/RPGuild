@@ -36,7 +36,8 @@ public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository
 
     public async Task<IReadOnlyList<CampanhaGuardada>> ListarDoUsuarioAsync(Guid userId, CancellationToken cancellationToken)
     {
-        // Sem posição na grade (não deveria acontecer), a campanha vai para o início, as mais novas primeiro.
+        // Proteção: a criação grava a campanha e a posição juntas, mas, se uma campanha ficar sem posição na grade,
+        // ela vai para o início, as mais novas primeiro.
         var campanhas = await (
             from c in db.Campanhas.AsNoTracking()
             where c.OwnerId == userId || db.MembrosDeCampanha.Any(m => m.CampaignId == c.Id && m.UserId == userId)

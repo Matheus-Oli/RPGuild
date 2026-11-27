@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.Configure<DataProtectionTokenProviderOptions>(options =>
             options.TokenLifespan = RegrasDeConta.ValidadeDoTokenDeRedefinicao);
 
+        services.AddScoped<ITransacao, TransacaoDoBanco>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAmizadeRepository, AmizadeRepository>();

@@ -317,6 +317,8 @@ Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
 
 1. Cada usuário (mestre ou jogador) tem a sua ordem; a de um não muda a de outro.
 2. Campanha nova entra **no início** da grade de quem cria (e, na parte 2, de quem aceita o convite), e o resto desce uma posição. Por isso quem nunca reordenou vê a mais nova primeiro.
+   - Na criação, a campanha e a posição na grade são gravadas **na mesma transação** (`ITransacao`, implementada por `TransacaoDoBanco`). Se a posição falhar, a campanha não é criada, nada sobra no banco e a resposta é 500 em ProblemDetails.
+   - Como proteção, o `GET /api/campaigns` põe no início uma campanha que esteja sem posição.
 3. `PUT /api/campaigns/order` recebe **exatamente** as campanhas do usuário: sem repetir, sem faltar e sem sobrar (campanha de outra pessoa ou inexistente conta como sobra); senão, 400. As posições são gravadas numa transação (`GradeDeCampanhas`).
 
 **Imagens (capa e banner)**
