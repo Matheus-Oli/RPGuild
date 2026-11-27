@@ -17,6 +17,7 @@ public static class TiposDeNotificacao
     public const string CampanhaExcluida = "campanha_excluida";
     public const string ConviteRecebido = "convite_recebido";
     public const string ConviteAceito = "convite_aceito";
+    public const string ConviteRecusado = "convite_recusado";
     public const string JogadorEntrou = "jogador_entrou";
 }
 
@@ -57,6 +58,7 @@ public static class MatrizDeNotificacoes
         [TiposDeNotificacao.CampanhaExcluida] = new(Sininho: true, EnvioPorEmail.Fila),
         [TiposDeNotificacao.ConviteRecebido] = new(Sininho: true, EnvioPorEmail.Fila),
         [TiposDeNotificacao.ConviteAceito] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.ConviteRecusado] = new(Sininho: true, EnvioPorEmail.Nenhum),
         [TiposDeNotificacao.JogadorEntrou] = new(Sininho: true, EnvioPorEmail.Fila),
     };
 

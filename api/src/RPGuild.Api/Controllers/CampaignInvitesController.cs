@@ -39,4 +39,14 @@ public sealed class CampaignInvitesController(ConviteService convites) : Control
         var resultado = await convites.AceitarAsync(User.Id(), id, cancellationToken);
         return this.ParaResposta(resultado, _ => NoContent());
     }
+
+    [HttpPost("{id:guid}/decline")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Recusar(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await convites.RecusarAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, _ => NoContent());
+    }
 }

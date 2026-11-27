@@ -51,3 +51,7 @@ public sealed record ConviteAceito(Guid ConviteId, Guid CampanhaId, string Campa
 /// <summary>Nº 13, para os outros jogadores (nem quem entrou, nem o mestre), com quem entrou.</summary>
 public sealed record JogadorEntrou(Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
     : Aviso(TiposDeNotificacao.JogadorEntrou);
+
+/// <summary>Nº 11, para o mestre, com quem recusou.</summary>
+public sealed record ConviteRecusado(Guid ConviteId, Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
+    : Aviso(TiposDeNotificacao.ConviteRecusado);

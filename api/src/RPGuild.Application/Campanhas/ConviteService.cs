@@ -197,7 +197,7 @@ public sealed class ConviteService(
     }
 
     /// <summary>
-    /// Só o convidado, e só pendente.
+    /// Só o convidado, e só pendente. O mestre recebe o aviso nº 11.
     /// </summary>
     public async Task<Resultado<Vazio>> RecusarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -209,6 +209,16 @@ public sealed class ConviteService(
 
         convite.Valor!.Recusar(relogio.GetUtcNow());
         await convites.SalvarAlteracoesAsync(cancellationToken);
+
+        if (await campanhas.BuscarPorIdAsync(convite.Valor.CampaignId, cancellationToken) is { } campanha)
+        {
+            var quem = await PessoaGuardadaAsync(userId, cancellationToken);
+            await notificador.NotificarAsync(
+                campanha.OwnerId,
+                new ConviteRecusado(convite.Valor.Id, campanha.Id, campanha.Nome, quem.Id, quem.Nome, quem.Nick),
+                cancellationToken);
+        }
+
         return Vazio.Valor;
     }
 
