@@ -279,6 +279,15 @@ public sealed class ConviteService(
         return avisos;
     }
 
+    /// <summary>
+    /// O aviso nº 12 para quem tem convite pendente na campanha que vai ser excluída. Os convites vão junto com ela.
+    /// </summary>
+    public async Task<IReadOnlyList<AvisoParaEnviar>> AvisosDeCampanhaExcluidaAsync(Campanha campanha, CancellationToken cancellationToken) =>
+    [
+        .. (await convites.PendentesDaCampanhaAsync(campanha.Id, cancellationToken))
+            .Select(c => new AvisoParaEnviar(c.UserId, new ConviteCancelado(campanha.Id, campanha.Nome))),
+    ];
+
     // Com os nomes de agora: a campanha, o mestre e quem entrou.
     private async Task AvisarEntradaAsync(ConviteDeCampanha convite, CancellationToken cancellationToken)
     {

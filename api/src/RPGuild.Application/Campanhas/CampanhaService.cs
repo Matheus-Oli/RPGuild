@@ -100,7 +100,8 @@ public sealed class CampanhaService(
 
     /// <summary>
     /// Só o mestre, com o nome da campanha e a frase de confirmação. Apaga a campanha com os jogadores e as posições
-    /// nas grades, apaga capa e banner do storage e avisa os jogadores (nº 18).
+    /// nas grades e os convites, apaga capa e banner do storage e avisa os jogadores (nº 18) e quem tinha convite
+    /// pendente (nº 12).
     /// </summary>
     public async Task<Resultado<Vazio>> ExcluirAsync(
         Guid userId, Guid campanhaId, ExcluirCampanhaRequest request, CancellationToken cancellationToken)
@@ -117,8 +118,9 @@ public sealed class CampanhaService(
             return ErrosDeCampanha.ConfirmacaoIncorreta;
         }
 
-        // Os jogadores e o nome do mestre, antes que o cascade apague os membros.
+        // Os jogadores, o nome do mestre e quem tinha convite pendente, antes que o cascade apague tudo.
         var guardada = await RecarregarAsync(campanhaId, cancellationToken);
+        var avisosDeConvite = await convites.AvisosDeCampanhaExcluidaAsync(campanha, cancellationToken);
 
         campanhas.Remover(campanha);
         await campanhas.SalvarAlteracoesAsync(cancellationToken);
@@ -128,6 +130,11 @@ public sealed class CampanhaService(
         {
             await notificador.NotificarAsync(
                 jogador.Pessoa.Id, new CampanhaExcluida(campanha.Nome, guardada.Mestre.Nome), cancellationToken);
+        }
+
+        foreach (var aviso in avisosDeConvite)
+        {
+            await notificador.NotificarAsync(aviso.UserId, aviso.Aviso, cancellationToken);
         }
 
         return Vazio.Valor;
