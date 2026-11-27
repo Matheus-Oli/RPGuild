@@ -18,6 +18,13 @@ public sealed class EventosDaCampanha(ICampanhaTempoReal tempoReal, ILogger<Even
     public Task CampanhaAtualizadaAsync(CampanhaAtualizadaEvento evento, CancellationToken cancellationToken) =>
         EmpurrarAsync("campanha atualizada", () => tempoReal.CampanhaAtualizadaAsync(evento, cancellationToken));
 
+    /// <summary>
+    /// Os convites pendentes apagados junto com a campanha não geram InvitesChanged: vale este evento.
+    /// </summary>
+    public Task CampanhaExcluidaAsync(Guid campanhaId, string campanhaNome, CancellationToken cancellationToken) =>
+        EmpurrarAsync(
+            "campanha excluída", () => tempoReal.CampanhaExcluidaAsync(new CampanhaExcluidaEvento(campanhaId, campanhaNome), cancellationToken));
+
     private async Task EmpurrarAsync(string evento, Func<Task> empurrar)
     {
         try

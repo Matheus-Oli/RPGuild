@@ -111,8 +111,8 @@ public sealed class CampanhaService(
 
     /// <summary>
     /// Só o mestre, com o nome da campanha e a frase de confirmação. Apaga a campanha com os jogadores e as posições
-    /// nas grades e os convites, apaga capa e banner do storage e avisa os jogadores (nº 18) e quem tinha convite
-    /// pendente (nº 12).
+    /// nas grades e os convites, apaga capa e banner do storage e avisa os jogadores (nº 18), quem tinha convite
+    /// pendente (nº 12) e o grupo da campanha (CampaignDeleted).
     /// </summary>
     public async Task<Resultado<Vazio>> ExcluirAsync(
         Guid userId, Guid campanhaId, ExcluirCampanhaRequest request, CancellationToken cancellationToken)
@@ -147,6 +147,8 @@ public sealed class CampanhaService(
         {
             await notificador.NotificarAsync(aviso.UserId, aviso.Aviso, cancellationToken);
         }
+
+        await eventos.CampanhaExcluidaAsync(campanha.Id, campanha.Nome, cancellationToken);
 
         return Vazio.Valor;
     }

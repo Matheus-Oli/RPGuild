@@ -15,6 +15,11 @@ public interface ICampanhaTempoReal
     /// Para o grupo da campanha.
     /// </summary>
     Task CampanhaAtualizadaAsync(CampanhaAtualizadaEvento evento, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Para o grupo da campanha.
+    /// </summary>
+    Task CampanhaExcluidaAsync(CampanhaExcluidaEvento evento, CancellationToken cancellationToken);
 }
 
 /// <param name="Tipo">"entrou" (e, no módulo de saída de player, "saiu").</param>
@@ -26,6 +31,8 @@ public sealed record MembroMudouEvento(Guid CampanhaId, string Tipo, MembroDaCam
 /// </summary>
 public sealed record CampanhaAtualizadaEvento(
     Guid Id, string Nome, string? Descricao, SistemaDaCampanhaResponse Sistema, string? CapaUrl, string? BannerUrl);
+
+public sealed record CampanhaExcluidaEvento(Guid CampanhaId, string CampanhaNome);
 
 public static class TiposDeMudancaDeMembro
 {
