@@ -63,6 +63,27 @@ public sealed class ConviteService(
     }
 
     /// <summary>
+    /// O card do convite para qualquer usuário logado: o convidado e o mestre veem tudo; os outros, só para quem é.
+    /// </summary>
+    public async Task<Resultado<CardDoConviteVisto>> CardAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
+    {
+        var convite = await convites.BuscarPorIdAsync(conviteId, cancellationToken);
+        var campanha = convite is null ? null : await campanhas.BuscarComPessoasAsync(convite.CampaignId, cancellationToken);
+        if (convite is null || campanha is null)
+        {
+            return ErrosDeConvite.ConviteNaoEncontrado;
+        }
+
+        return CardDoConvite.Montar(
+            convite,
+            campanha,
+            await PessoaGuardadaAsync(convite.InvitedBy, cancellationToken),
+            await PessoaGuardadaAsync(convite.UserId, cancellationToken),
+            userId,
+            Url);
+    }
+
+    /// <summary>
     /// Os convites pendentes da campanha, os mais novos primeiro. Só o mestre.
     /// </summary>
     public async Task<Resultado<ConviteDaCampanhaResponse[]>> ListarDaCampanhaAsync(
@@ -240,10 +261,13 @@ public sealed class ConviteService(
 
     private string? Url(string? path) => path is null ? null : storage.ObterUrlPublica(path);
 
-    private async Task<PessoaDaCampanhaResponse> PessoaAsync(Guid userId, CancellationToken cancellationToken)
+    private async Task<PessoaDaCampanhaResponse> PessoaAsync(Guid userId, CancellationToken cancellationToken) =>
+        Pessoa(await PessoaGuardadaAsync(userId, cancellationToken));
+
+    private async Task<PessoaGuardada> PessoaGuardadaAsync(Guid userId, CancellationToken cancellationToken)
     {
         var perfil = await identity.BuscarPerfilAsync(userId, cancellationToken)
             ?? throw new InvalidOperationException($"O usuário {userId} sumiu no meio da requisição.");
-        return new PessoaDaCampanhaResponse(perfil.Id, perfil.Nome, perfil.Nick, Url(perfil.AvatarPath));
+        return new PessoaGuardada(perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath);
     }
 }

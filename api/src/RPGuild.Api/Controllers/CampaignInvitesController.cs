@@ -14,4 +14,19 @@ public sealed class CampaignInvitesController(ConviteService convites) : Control
     [ProducesResponseType<IReadOnlyList<MeuConviteResponse>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Meus(CancellationToken cancellationToken) =>
         Ok(await convites.ListarMeusAsync(User.Id(), cancellationToken));
+
+    /// <summary>
+    /// O card do convite. O convidado e o mestre veem tudo; qualquer outro usuário logado, só {id, podeResponder, para}.
+    /// </summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<CardDoConviteResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<CardDoConviteParaOutroResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Card(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await convites.CardAsync(User.Id(), id, cancellationToken);
+
+        // Pelo tipo concreto: cada perfil vê só os campos do seu card.
+        return this.ParaResposta(resultado, card => Ok((object)card));
+    }
 }
