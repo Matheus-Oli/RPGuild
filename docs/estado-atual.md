@@ -1,6 +1,6 @@
 # RPGuild — Estado atual e decisões recentes
 
-Atualizado em 24/11/2026. Este arquivo complementa o "Documento do projeto": onde os dois divergirem, vale este.
+Atualizado em 27/11/2026. Este arquivo complementa o "Documento do projeto": onde os dois divergirem, vale este.
 
 ## Onde as coisas estão
 
@@ -20,6 +20,20 @@ O backlog antigo (S0 a S10, fatiado por camada) foi descartado. A nova ordem é:
 2. **Back-end e banco**: um módulo por vez (setup; contas; taberna; notificações; campanhas e convites; conteúdo D&D; fichas; rolagens; sessões e lembretes; documentos; saída de player). Cada módulo com entidades, migration, endpoints, regras e testes. Antes de começar, revisar os endpoints contra o protótipo.
 3. **Front-end + integração**: uma tela do protótipo por vez, já ligada na API.
 4. **Deploy e polimento**: VM Oracle, DuckDNS + Caddy, CI/CD, mobile, backup.
+
+## Nova feature v1: visão geral da campanha — "Onde paramos" e "Atividade recente"
+
+- As duas vêm do protótipo e entram na v1.
+- **Onde paramos:** o resumo da última sessão jogada, com o link "Ler o diário da campanha". Os detalhes ficam para os módulos de Sessões e Documentos.
+- **Atividade recente:** uma lista curta, só com o que é público. Os detalhes também ficam para Sessões e Documentos.
+- No módulo de Campanhas, os campos já existem no detalhe (`ondeParamos`, `atividadeRecente`) e vêm vazios.
+
+## Nova feature v1: grade de campanhas com ordem do usuário
+
+- As campanhas aparecem numa grade, a mais nova primeiro por padrão.
+- Cada usuário (mestre ou jogador) reorganiza a sua; a ordem de um não muda a de outro.
+- A ordem é salva na API (`PUT /api/campaigns/order`).
+- Campanha nova entra no início da grade: a de quem cria e, na parte 2, a de quem aceita o convite.
 
 ## Troca do front: Angular → React (24/11/2026)
 

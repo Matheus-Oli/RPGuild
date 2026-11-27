@@ -317,6 +317,7 @@ PostgreSQL com núcleo relacional; o que muda por sistema fica em JSONB (charact
 | system_content          | id, system_id, tipo (classe, subclasse, especie, antecedente, talento, magia, item…), slug, nome, origem (2024, legacy), dados JSONB, versao                 | Preenchida pelo seed           |
 | campaigns               | id, owner_id, system_id, nome, descricao, capa_path, banner_path, created_at, updated_at                                                                     | owner = mestre                 |
 | campaign_members        | campaign_id, user_id, joined_at                                                                                                                              | Só jogadores; PK composta      |
+| campaign_user_order     | user_id, campaign_id, posicao                                                                                                                                | Grade de cada usuário; PK composta |
 | campaign_invites        | id, campaign_id, invited_by, user_id, status (pendente, aceito, recusado, cancelado), created_at, responded_at                                               | Só amigos                      |
 | campaign_leave_requests | id, campaign_id, user_id, mensagem, status (pendente, aprovada, recusada), created_at, responded_at                                                          |                                |
 | characters              | id, campaign_id, owner_id, nome, retrato_path, dados JSONB, anotacoes JSONB, created_at, updated_at                                                          | Sempre privada (dono + mestre) |
@@ -389,6 +390,8 @@ PUT /me/password {atual, nova}
 POST /uploads/sign {tipo, contentType} → {uploadUrl, path, publicUrl}
 ```
 
+`tipo`: `avatar` (path `avatars/{userId}/...`), `capa` e `banner` (path `campaigns/{userId}/...`, porque a campanha ainda não existe na hora do upload). Os três aceitam os mesmos `contentType` e o mesmo limite.
+
 **Taberna**
 
 ```
@@ -406,18 +409,27 @@ As listas de amigos e de pedidos não são paginadas.
 **Campanhas e convites**
 
 ```
-GET /campaigns (onde sou mestre ou jogador)
-POST /campaigns {nome, descricao, capaPath, bannerPath, sistema, convidados\[\]}
-GET /campaigns/{id}
-PUT /campaigns/{id}
-DELETE /campaigns/{id} {confirmacaoNome, confirmacaoFrase}
-GET /campaigns/{id}/members
+GET /systems → [{slug, nome, ativo}]
+GET /campaigns (onde sou mestre ou jogador, na ordem da minha grade) → [card]
+POST /campaigns {nome, descricao, capaPath, bannerPath, sistema, convidados\[\]} → detalhe
+PUT /campaigns/order {campaignIds\[\]} (todas as minhas, na ordem da grade)
+GET /campaigns/{id} → detalhe
+PUT /campaigns/{id} {nome, descricao, capaPath, bannerPath} (só o mestre; o sistema não muda) → detalhe
+DELETE /campaigns/{id} {confirmacaoNome, confirmacaoFrase} (só o mestre)
+GET /campaigns/{id}/members → [membro]
 POST /campaigns/{id}/invites {userIds\[\]} (só amigos)
 GET /campaign-invites/{id} (card; flag podeResponder)
 POST /campaign-invites/{id}/accept
 POST /campaign-invites/{id}/decline
 DELETE /campaign-invites/{id} (mestre cancela)
 ```
+
+Quem não é mestre nem jogador da campanha recebe 404; jogador numa ação de mestre recebe 403. Nenhuma resposta tem e-mail.
+
+- **Card:** `{id, nome, sistema: {slug, nome}, papel: "mestre"|"jogador", capaUrl, mestre: {userId, nome, nick, avatarUrl}, jogadores: [{userId, nome, nick, avatarUrl}], proximaSessao}`.
+- **Detalhe:** os campos do card, mais `descricao`, `bannerUrl`, `criadaEm`, `estatisticas: {sessoesJogadas, horasDeMesa, documentos}`, `ondeParamos` e `atividadeRecente: []`.
+- **Membro:** `{userId, nome, nick, avatarUrl, papel, entrouEm, ficha}`. O mestre vem primeiro, com `entrouEm` = criação da campanha; `ficha` traz classe, nível e PV.
+- `proximaSessao`, `estatisticas`, `ondeParamos`, `atividadeRecente` e `ficha` são preenchidos pelos módulos de Sessões, Documentos e Fichas; até lá vêm vazios (null, zeros ou lista vazia).
 
 **Saída de player**
 

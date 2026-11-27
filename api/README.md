@@ -191,11 +191,13 @@ Imagens ficam no Supabase Storage, no bucket público `imagens`. A API não rece
 
 **Fluxo**
 
-1. O front chama `POST /api/uploads/sign` com o `tipo` e o `contentType` do arquivo. Por enquanto só `tipo = "avatar"`; capa, banner e retrato respondem 400 ("ainda não suportado").
-2. `contentType` permitido: `image/jpeg`, `image/png`, `image/webp`, `image/gif`. A API escolhe o path, `avatars/{userId}/{guid}.{ext}`, com a extensão vinda do `contentType` (`jpg`, `png`, `webp`, `gif`).
+1. O front chama `POST /api/uploads/sign` com o `tipo` e o `contentType` do arquivo. Tipos: `avatar`, `capa` e `banner` (os dois últimos da [campanha](#campanhas)); retrato responde 400 ("ainda não suportado").
+2. `contentType` permitido (o mesmo para os três tipos): `image/jpeg`, `image/png`, `image/webp`, `image/gif`. A API escolhe o path, com a extensão vinda do `contentType` (`jpg`, `png`, `webp`, `gif`):
+   - avatar: `avatars/{userId}/{guid}.{ext}`;
+   - capa e banner: `campaigns/{userId}/{guid}.{ext}`. A pasta é de quem sobe, porque a campanha ainda não existe na hora do upload.
 3. A resposta traz a `uploadUrl` (assinada, com `?token=`; o Supabase a deixa valer por 2 horas), o `path` e a `publicUrl`.
 4. O front sobe o arquivo com `PUT` na `uploadUrl`, corpo binário e `Content-Type` do arquivo. Não precisa de chave nem de Bearer: o token da URL autoriza só aquele path.
-5. Com o upload feito, o front manda o `path` em `PUT /api/me` (`avatarPath`). O avatar antigo é apagado do bucket nessa hora.
+5. Com o upload feito, o front manda o `path` em `PUT /api/me` (`avatarPath`) ou no `POST`/`PUT` da campanha (`capaPath`, `bannerPath`). A imagem antiga é apagada do bucket nessa hora.
 
 **Limites:** 5 MB por arquivo e os mesmos tipos de imagem, configurados **no bucket** do Supabase. Como a API não vê o arquivo, quem barra o tamanho é o Storage.
 
@@ -266,11 +268,81 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 
 Nos testes, `TabernaDeTeste` cria vários usuários logados (`CriarUsuariosLogadosAsync`, `CriarDoisUsuariosLogadosAsync`) e deixa dois amigos direto no banco (`TornarAmigosAsync`, com o "amigos desde" controlável). `ClienteDaTaberna` faz as chamadas e monta as URLs.
 
+## Campanhas
+
+Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `GET /api/systems` | — | 200 `[{slug, nome, ativo}]` |
+| `POST /api/campaigns` | `{nome, descricao?, sistema, capaPath?, bannerPath?}` | 201 detalhe · 400 |
+| `GET /api/campaigns` | — | 200 `[card]`, na ordem da grade do usuário |
+| `PUT /api/campaigns/order` | `{campaignIds[]}` | 204 · 400 |
+| `GET /api/campaigns/{id}` | — | 200 detalhe · 404 |
+| `GET /api/campaigns/{id}/members` | — | 200 `[membro]` · 404 |
+| `PUT /api/campaigns/{id}` | `{nome, descricao?, capaPath?, bannerPath?}` | 200 detalhe · 400 · 403 · 404 |
+| `DELETE /api/campaigns/{id}` | `{confirmacaoNome, confirmacaoFrase}` | 204 · 400 · 403 · 404 |
+
+**Formatos** (nenhum tem e-mail)
+
+- **Card:** `{id, nome, sistema: {slug, nome}, papel: "mestre"|"jogador", capaUrl, mestre: {userId, nome, nick, avatarUrl}, jogadores: [{userId, nome, nick, avatarUrl}], proximaSessao}`. `papel` é o de quem pediu; os jogadores vêm na ordem em que entraram.
+- **Detalhe:** os campos do card, mais `descricao`, `bannerUrl`, `criadaEm`, `estatisticas: {sessoesJogadas, horasDeMesa, documentos}`, `ondeParamos` e `atividadeRecente`.
+- **Membro:** `{userId, nome, nick, avatarUrl, papel, entrouEm, ficha}`. O mestre vem primeiro, com `entrouEm` = criação da campanha; depois os jogadores, na ordem em que entraram (`joined_at`).
+- `capaUrl`, `bannerUrl` e `avatarUrl` são as URLs públicas do storage, ou null.
+
+**Campos de outros módulos:** já vêm na resposta, vazios, com `TODO(<modulo>)` no `CampanhaService`:
+
+| Campo | Valor agora | Módulo |
+| --- | --- | --- |
+| `proximaSessao` | `null` | Sessões |
+| `estatisticas` | `{sessoesJogadas: 0, horasDeMesa: 0, documentos: 0}` | Sessões e Documentos |
+| `ondeParamos` | `null` | Sessões |
+| `atividadeRecente` | `[]` | Sessões e Documentos |
+| `ficha` (membro) | `null` | Fichas |
+
+**Regras**
+
+1. Quem cria é o mestre (`owner_id`). Os jogadores ficam em `campaign_members`; o mestre não entra lá. Não há limite de jogadores. Por enquanto ninguém entra como jogador pela API: quem cria a linha é o aceite do convite (parte 2).
+2. Nome obrigatório, até 80 caracteres (sem os espaços das pontas); descrição opcional, até 2000.
+3. `sistema` é o slug de um sistema **ativo** (na v1, só `dnd2024`). Inativo ou inexistente dá 400. **O sistema não muda depois de criada:** o `PUT` nem tem o campo (se vier, é ignorado).
+4. `game_systems` tem o seed na migration `AddCampanhas`: `dnd2024` (ativo), `ordem2`, `t20`, `coc` e `deadlands` (inativos).
+
+**Acesso** (`AcessoACampanha`, reaproveitável pelos próximos módulos)
+
+- `DeMembroAsync`: mestre ou jogador. Quem não participa recebe **404**, como se a campanha não existisse.
+- `DeMestreAsync`: só o mestre. Jogador recebe **403** (`TipoErro.Proibido`); quem não participa, 404.
+- Ler (detalhe e membros) é de membro; editar e excluir são de mestre.
+
+**Grade** (`campaign_user_order`: `user_id`, `campaign_id`, `posicao`, PK composta, cascade nos dois)
+
+1. Cada usuário (mestre ou jogador) tem a sua ordem; a de um não muda a de outro.
+2. Campanha nova entra **no início** da grade de quem cria (e, na parte 2, de quem aceita o convite), e o resto desce uma posição. Por isso quem nunca reordenou vê a mais nova primeiro.
+3. `PUT /api/campaigns/order` recebe **exatamente** as campanhas do usuário: sem repetir, sem faltar e sem sobrar (campanha de outra pessoa ou inexistente conta como sobra); senão, 400. As posições são gravadas numa transação (`GradeDeCampanhas`).
+
+**Imagens (capa e banner)**
+
+1. Os paths vêm do [`POST /api/uploads/sign`](#uploads) com `tipo` `capa` ou `banner`.
+2. No `POST` e no `PUT`, o path precisa estar na pasta de campanhas do próprio usuário (`campaigns/{userId}/...`, mesma regra do avatar: sem `..`, `.`, `\` ou segmentos vazios); senão, 400. `null` deixa a campanha sem a imagem (no `PUT`, remove).
+3. **Trocar ou remover a capa ou o banner apaga a imagem antiga do bucket**, depois de salvar. Se a exclusão falhar, a falha vai para o log (`Warning`, com o path) e a requisição segue.
+
+**Editar**
+
+- Só o mestre. Responde o detalhe atualizado.
+- Se algo mudou, os jogadores recebem o aviso nº 17 `campanha_editada` (só sininho), com `{campanhaId, campanhaNome}`. O mestre não recebe. Um `PUT` sem mudança nenhuma não avisa ninguém.
+
+**Excluir**
+
+1. Só o mestre, com `confirmacaoNome` igual ao nome da campanha e `confirmacaoFrase` igual a `desejo excluir a campanha`. As duas são **exatas, ignorando só os espaços nas pontas**: maiúsculas e acentos contam (`ConfirmacaoDeExclusao`). Se não bater, 400 e nada é apagado.
+2. Apaga a campanha e tudo dela: os jogadores (`campaign_members`) e as posições nas grades (`campaign_user_order`), pelo cascade do banco. Capa e banner são apagados do bucket (falha vai para o log e a requisição segue com 204).
+3. Os jogadores (lidos **antes** de apagar) recebem o aviso nº 18 `campanha_excluida` no sininho e por e-mail, com `{campanhaNome, mestreNome}`.
+
+Nos testes, `CampanhasDeTeste` cria campanhas pela API (`CriarCampanhaAsync`, `CriarUsuarioComCampanhasAsync`), põe um jogador direto no banco com a campanha no início da grade dele (`AdicionarJogadorAsync`, como o aceite do convite vai fazer) e lê a grade e as linhas da campanha no banco (`OrdemNoBancoAsync`, `LinhasDaCampanhaAsync`).
+
 ## Notificações
 
-Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso, emailDestino?)`), decide os canais de cada tipo, grava o sininho e manda o e-mail. Contas e Taberna só chamam esse serviço; ninguém mais manda e-mail direto.
+Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso, emailDestino?)`), decide os canais de cada tipo, grava o sininho e manda o e-mail. Contas, Taberna e Campanhas só chamam esse serviço; ninguém mais manda e-mail direto.
 
-- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)` e `AmizadeRecusada(...)`.
+- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)`, `AmizadeRecusada(...)`, `CampanhaEditada(...)` e `CampanhaExcluida(...)`.
 - O `emailDestino` é para quando o e-mail não vai para o endereço atual do usuário: o antigo no nº 4 e o novo na confirmação.
 
 **Matriz** (`MatrizDeNotificacoes`, o único lugar com os canais):
@@ -285,6 +357,8 @@ Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso
 | `amizade_recebida` | 5 | sim | fila | destinatário do pedido | `{pedidoId, deUserId, deNome, deNick}` |
 | `amizade_aceita` | 6 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
 | `amizade_recusada` | 7 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
+| `campanha_editada` | 17 | sim | — | os jogadores (não o mestre) | `{campanhaId, campanhaNome}` |
+| `campanha_excluida` | 18 | sim | fila | os jogadores (não o mestre) | `{campanhaNome, mestreNome}` |
 
 - O amigo removido (nº 8) não tem tipo: ninguém é avisado.
 - O front monta o texto: a API guarda e devolve só `tipo` e `dados`. Os `dados` levam os ids e os nomes **de quando a notificação foi criada** (não são atualizados se a pessoa mudar o nome ou o nick).
@@ -356,7 +430,7 @@ Hangfire (`Hangfire.AspNetCore` + `Hangfire.PostgreSql`) com storage no mesmo Po
 
 ## E-mail
 
-E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem seis: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`) e pedido de amizade (no `POST /api/friends/requests`, para o destinatário).
+E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem sete: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`), pedido de amizade (no `POST /api/friends/requests`, para o destinatário) e campanha excluída (no `DELETE /api/campaigns/{id}`, para os jogadores).
 
 **Senha de app do Gmail**
 
