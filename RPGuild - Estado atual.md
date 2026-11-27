@@ -1,4 +1,4 @@
-# RPGuild — Estado atual e decisões recentes
+ # RPGuild — Estado atual e decisões recentes
 
 Atualizado em 27/11/2026. Este arquivo complementa o "Documento do projeto": onde os dois divergirem, vale este.
 

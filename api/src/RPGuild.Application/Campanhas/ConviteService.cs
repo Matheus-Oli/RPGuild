@@ -50,7 +50,16 @@ public sealed class ConviteService(
         }
 
         var novos = await AdicionarAsync(campanhaId, userId, request.UserIds, cancellationToken);
-        await convites.SalvarAlteracoesAsync(cancellationToken);
+        try
+        {
+            await convites.SalvarAlteracoesAsync(cancellationToken);
+        }
+        catch (ConvitePendenteJaExisteException)
+        {
+            // Outro convite para alguém da lista entrou ao mesmo tempo: mesmo 409 de quem já tem pendente.
+            return await ConvidadosQueColidiramAsync(campanhaId, request.UserIds, cancellationToken);
+        }
+
         await AvisarConvidadosAsync(novos, campanha, cancellationToken);
 
         var respostas = new List<ConviteDaCampanhaResponse>();
@@ -182,15 +191,23 @@ public sealed class ConviteService(
         }
 
         var agora = relogio.GetUtcNow();
-        await transacao.ExecutarAsync(
-            async () =>
-            {
-                convite.Valor!.Aceitar(agora);
-                await campanhas.AdicionarJogadorAsync(new MembroDaCampanha(convite.Valor.CampaignId, userId, agora), cancellationToken);
-                await convites.SalvarAlteracoesAsync(cancellationToken);
-                await grade.ColocarNoInicioAsync(userId, convite.Valor.CampaignId, cancellationToken);
-            },
-            cancellationToken);
+        try
+        {
+            await transacao.ExecutarAsync(
+                async () =>
+                {
+                    convite.Valor!.Aceitar(agora);
+                    await campanhas.AdicionarJogadorAsync(new MembroDaCampanha(convite.Valor.CampaignId, userId, agora), cancellationToken);
+                    await convites.SalvarAlteracoesAsync(cancellationToken);
+                    await grade.ColocarNoInicioAsync(userId, convite.Valor.CampaignId, cancellationToken);
+                },
+                cancellationToken);
+        }
+        catch (JogadorJaNaCampanhaException)
+        {
+            // Outro aceite do mesmo convite entrou antes; a transação desfez o status, o jogador e a grade.
+            return ErrosDeConvite.ConviteNaoPendente;
+        }
 
         await AvisarEntradaAsync(convite.Valor!, cancellationToken);
         return Vazio.Valor;
@@ -287,6 +304,17 @@ public sealed class ConviteService(
         .. (await convites.PendentesDaCampanhaAsync(campanha.Id, cancellationToken))
             .Select(c => new AvisoParaEnviar(c.UserId, new ConviteCancelado(campanha.Id, campanha.Nome))),
     ];
+
+    // Quem da lista tem pendente agora (o outro request já gravou). Se o banco não mostrar ninguém, vale a lista toda.
+    private async Task<Erro> ConvidadosQueColidiramAsync(Guid campanhaId, IReadOnlyList<Guid> userIds, CancellationToken cancellationToken)
+    {
+        var pendentes = (await convites.PendentesDaCampanhaAsync(campanhaId, cancellationToken)).Select(c => c.UserId).ToHashSet();
+        var colidiram = userIds.Where(pendentes.Contains).ToList();
+        return ErrosDeConvite.ConvidadosInvalidos(
+        [
+            .. (colidiram.Count > 0 ? colidiram : userIds).Select(id => new ConvidadoInvalido(id, MotivosDeConvite.JaConvidado)),
+        ]);
+    }
 
     // Com os nomes de agora: a campanha, o mestre e quem entrou.
     private async Task AvisarEntradaAsync(ConviteDeCampanha convite, CancellationToken cancellationToken)

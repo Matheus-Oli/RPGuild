@@ -57,6 +57,11 @@ public sealed class CampanhaConfiguration : IEntityTypeConfiguration<Campanha>
 
 public sealed class MembroDaCampanhaConfiguration : IEntityTypeConfiguration<MembroDaCampanha>
 {
+    /// <summary>
+    /// Nome da PK (campaign_id, user_id), dado pela convenção snake_case. Dois aceites do mesmo convite batem nela.
+    /// </summary>
+    public const string ChavePrimaria = "pk_campaign_members";
+
     public void Configure(EntityTypeBuilder<MembroDaCampanha> builder)
     {
         builder.ToTable("campaign_members");

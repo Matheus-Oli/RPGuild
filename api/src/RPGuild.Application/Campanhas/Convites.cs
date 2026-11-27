@@ -81,6 +81,10 @@ public interface IConviteRepository
     /// </summary>
     Task<IReadOnlyList<ConviteGuardado>> ListarPendentesDoUsuarioAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Salva convites e jogadores. Corridas viram <see cref="ConvitePendenteJaExisteException"/> (dois convites pendentes
+    /// para a mesma pessoa) ou <see cref="JogadorJaNaCampanhaException"/> (dois aceites do mesmo convite).
+    /// </summary>
     Task SalvarAlteracoesAsync(CancellationToken cancellationToken);
 }
 
