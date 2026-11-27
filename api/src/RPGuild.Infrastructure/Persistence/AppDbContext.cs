@@ -25,6 +25,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
 
     public DbSet<PosicaoNaGrade> OrdemDasCampanhas => Set<PosicaoNaGrade>();
 
+    public DbSet<ConviteDeCampanha> ConvitesDeCampanha => Set<ConviteDeCampanha>();
+
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)

@@ -39,3 +39,7 @@ public sealed record CampanhaEditada(Guid CampanhaId, string CampanhaNome) : Avi
 
 /// <summary>Nº 18, para os jogadores. Sem o id: a campanha não existe mais.</summary>
 public sealed record CampanhaExcluida(string CampanhaNome, string MestreNome) : Aviso(TiposDeNotificacao.CampanhaExcluida);
+
+/// <summary>Nº 9, para o convidado, com o mestre de agora.</summary>
+public sealed record ConviteRecebido(Guid ConviteId, Guid CampanhaId, string CampanhaNome, string MestreNome, string MestreNick)
+    : Aviso(TiposDeNotificacao.ConviteRecebido);

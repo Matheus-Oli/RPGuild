@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<SistemasService>();
         services.AddScoped<GradeDeCampanhas>();
         services.AddScoped<AcessoACampanha>();
+        services.AddScoped<ConviteService>();
         services.AddScoped<CampanhaService>();
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<EnvioDeEmail>();

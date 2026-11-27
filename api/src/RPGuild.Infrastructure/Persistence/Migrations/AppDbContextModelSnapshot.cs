@@ -181,6 +181,55 @@ namespace RPGuild.Infrastructure.Persistence.Migrations
                     b.ToTable("campaigns", (string)null);
                 });
 
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.ConviteDeCampanha", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("InvitedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invited_by");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_campaign_invites");
+
+                    b.HasIndex("InvitedBy")
+                        .HasDatabaseName("ix_campaign_invites_invited_by");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_campaign_invites_user_id");
+
+                    b.HasIndex("CampaignId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_campaign_invites_pendente")
+                        .HasFilter("status = 'pendente'");
+
+                    b.ToTable("campaign_invites", (string)null);
+                });
+
             modelBuilder.Entity("RPGuild.Domain.Campanhas.MembroDaCampanha", b =>
                 {
                     b.Property<Guid>("CampaignId")
@@ -589,6 +638,30 @@ namespace RPGuild.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_campaigns_game_systems_system_id");
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.ConviteDeCampanha", b =>
+                {
+                    b.HasOne("RPGuild.Domain.Campanhas.Campanha", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_invites_campaigns_campaign_id");
+
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InvitedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_invites_users_invited_by");
+
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_invites_users_user_id");
                 });
 
             modelBuilder.Entity("RPGuild.Domain.Campanhas.MembroDaCampanha", b =>

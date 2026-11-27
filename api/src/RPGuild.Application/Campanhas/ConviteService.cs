@@ -1,5 +1,6 @@
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Taberna;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Campanhas;
@@ -19,6 +20,7 @@ public sealed class ConviteService(
     ITransacao transacao,
     IIdentityService identity,
     IStorageService storage,
+    INotificador notificador,
     TimeProvider relogio)
 {
     /// <summary>
@@ -49,6 +51,7 @@ public sealed class ConviteService(
 
         var novos = await AdicionarAsync(campanhaId, userId, request.UserIds, cancellationToken);
         await convites.SalvarAlteracoesAsync(cancellationToken);
+        await AvisarConvidadosAsync(novos, campanha, cancellationToken);
 
         var respostas = new List<ConviteDaCampanhaResponse>();
         foreach (var convite in novos)
@@ -100,6 +103,21 @@ public sealed class ConviteService(
         }
 
         return novos;
+    }
+
+    /// <summary>
+    /// Aviso nº 9 para cada convidado. Só depois de gravar os convites.
+    /// </summary>
+    public async Task AvisarConvidadosAsync(
+        IEnumerable<ConviteDeCampanha> novos, CampanhaGuardada campanha, CancellationToken cancellationToken)
+    {
+        foreach (var convite in novos)
+        {
+            await notificador.NotificarAsync(
+                convite.UserId,
+                new ConviteRecebido(convite.Id, campanha.Campanha.Id, campanha.Campanha.Nome, campanha.Mestre.Nome, campanha.Mestre.Nick),
+                cancellationToken);
+        }
     }
 
     /// <summary>

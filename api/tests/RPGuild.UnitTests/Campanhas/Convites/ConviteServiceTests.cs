@@ -2,6 +2,7 @@ using Microsoft.Extensions.Time.Testing;
 using RPGuild.Application.Campanhas;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Campanhas;
 using RPGuild.Domain.Taberna;
@@ -56,6 +57,7 @@ public class ConviteServiceTests
             new TransacaoFalsa(),
             identity,
             Substitute.For<IStorageService>(),
+            Substitute.For<INotificador>(),
             new FakeTimeProvider(Agora));
     }
 

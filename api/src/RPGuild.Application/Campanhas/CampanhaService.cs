@@ -11,6 +11,7 @@ public sealed class CampanhaService(
     ISistemasRepository sistemas,
     GradeDeCampanhas grade,
     AcessoACampanha acessos,
+    ConviteService convites,
     IStorageService storage,
     INotificador notificador,
     ITransacao transacao,
@@ -18,8 +19,8 @@ public sealed class CampanhaService(
     ILogger<CampanhaService> logger)
 {
     /// <summary>
-    /// Quem cria é o mestre, e a campanha entra no início da grade dele, na mesma transação: se a posição falhar,
-    /// a campanha não é criada. O request já chega validado.
+    /// Quem cria é o mestre, e a campanha entra no início da grade dele. Os convidados (amigos do mestre) recebem os
+    /// convites na mesma transação: se a posição ou um convite falhar, nada é criado. O request já chega validado.
     /// </summary>
     public async Task<Resultado<CampanhaDetalheResponse>> CriarAsync(
         Guid userId, CriarCampanhaRequest request, CancellationToken cancellationToken)
@@ -35,18 +36,29 @@ public sealed class CampanhaService(
             return ErrosDeCampanha.ImagemForaDaPasta;
         }
 
+        var convidados = request.Convidados ?? [];
+        if (await convites.ValidarAsync(userId, convidados, jogadores: [], comPendente: [], cancellationToken) is { } erro)
+        {
+            return erro;
+        }
+
         var campanha = Campanha.Criar(
             userId, sistema.Id, request.Nome.Trim(), request.Descricao, request.CapaPath, request.BannerPath, relogio.GetUtcNow());
+        IReadOnlyList<ConviteDeCampanha> novos = [];
         await transacao.ExecutarAsync(
             async () =>
             {
                 await campanhas.AdicionarAsync(campanha, cancellationToken);
                 await campanhas.SalvarAlteracoesAsync(cancellationToken);
                 await grade.ColocarNoInicioAsync(userId, campanha.Id, cancellationToken);
+                novos = await convites.AdicionarAsync(campanha.Id, userId, convidados, cancellationToken);
+                await campanhas.SalvarAlteracoesAsync(cancellationToken);
             },
             cancellationToken);
 
-        return Detalhe(await RecarregarAsync(campanha.Id, cancellationToken), userId);
+        var criada = await RecarregarAsync(campanha.Id, cancellationToken);
+        await convites.AvisarConvidadosAsync(novos, criada, cancellationToken);
+        return Detalhe(criada, userId);
     }
 
     /// <summary>

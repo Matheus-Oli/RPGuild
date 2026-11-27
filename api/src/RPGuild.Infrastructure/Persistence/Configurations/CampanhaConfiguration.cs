@@ -101,3 +101,51 @@ public sealed class PosicaoNaGradeConfiguration : IEntityTypeConfiguration<Posic
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public sealed class ConviteDeCampanhaConfiguration : IEntityTypeConfiguration<ConviteDeCampanha>
+{
+    /// <summary>
+    /// No máximo um convite pendente por (campanha, usuário). Recusados e cancelados ficam como histórico.
+    /// </summary>
+    public const string IndicePendente = "ix_campaign_invites_pendente";
+
+    public void Configure(EntityTypeBuilder<ConviteDeCampanha> builder)
+    {
+        builder.ToTable("campaign_invites");
+
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+
+        // Guardado como texto em minúsculas: pendente, aceito, recusado, cancelado.
+        builder.Property(c => c.Status)
+            .HasConversion(status => status.ToString().ToLowerInvariant(), texto => Enum.Parse<StatusDoConvite>(texto, true))
+            .HasMaxLength(10)
+            .IsRequired();
+
+        builder.HasIndex(c => new { c.CampaignId, c.UserId })
+            .IsUnique()
+            .HasFilter("status = 'pendente'")
+            .HasDatabaseName(IndicePendente);
+
+        // "Meus convites pendentes".
+        builder.HasIndex(c => c.UserId);
+
+        builder.HasOne<Campanha>()
+            .WithMany()
+            .HasForeignKey(c => c.CampaignId)
+            .HasConstraintName("fk_campaign_invites_campaigns_campaign_id")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(c => c.InvitedBy)
+            .HasConstraintName("fk_campaign_invites_users_invited_by")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .HasConstraintName("fk_campaign_invites_users_user_id")
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
