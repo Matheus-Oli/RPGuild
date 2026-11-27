@@ -1,5 +1,3 @@
-using RPGuild.Application.Notificacoes;
-
 namespace RPGuild.Application.Taberna;
 
 /// <summary>
@@ -9,7 +7,7 @@ public interface IConvitesEntreAmigos
 {
     /// <summary>
     /// Cancela e salva os convites pendentes entre os dois (campanhas em que um é mestre e o outro é o convidado). Devolve
-    /// os avisos nº 12, para quem chamou mandar depois de confirmar a transação.
+    /// o que mandar depois de confirmar a transação (os avisos nº 12 e o InvitesChanged), para quem chamou executar.
     /// </summary>
-    Task<IReadOnlyList<AvisoParaEnviar>> CancelarPendentesEntreAsync(Guid usuarioA, Guid usuarioB, CancellationToken cancellationToken);
+    Task<Func<CancellationToken, Task>> CancelarPendentesEntreAsync(Guid usuarioA, Guid usuarioB, CancellationToken cancellationToken);
 }

@@ -151,21 +151,17 @@ public sealed class AmizadeService(
             return ErrosDaTaberna.AmizadeNaoEncontrada;
         }
 
-        IReadOnlyList<AvisoParaEnviar> avisos = [];
+        Func<CancellationToken, Task> depoisDeConfirmar = _ => Task.CompletedTask;
         await transacao.ExecutarAsync(
             async () =>
             {
                 amizades.Remover(amizade);
                 await amizades.SalvarAlteracoesAsync(cancellationToken);
-                avisos = await convites.CancelarPendentesEntreAsync(userId, amigoId, cancellationToken);
+                depoisDeConfirmar = await convites.CancelarPendentesEntreAsync(userId, amigoId, cancellationToken);
             },
             cancellationToken);
 
-        foreach (var aviso in avisos)
-        {
-            await notificador.NotificarAsync(aviso.UserId, aviso.Aviso, cancellationToken);
-        }
-
+        await depoisDeConfirmar(cancellationToken);
         return Vazio.Valor;
     }
 

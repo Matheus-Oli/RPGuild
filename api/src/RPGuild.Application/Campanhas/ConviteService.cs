@@ -165,7 +165,7 @@ public sealed class ConviteService(
     }
 
     /// <summary>
-    /// Aviso nº 9 para cada convidado. Só depois de gravar os convites.
+    /// Aviso nº 9 para cada convidado e o InvitesChanged "criado" para o mestre. Só depois de gravar os convites.
     /// </summary>
     public async Task AvisarConvidadosAsync(
         IEnumerable<ConviteDeCampanha> novos, CampanhaGuardada campanha, CancellationToken cancellationToken)
@@ -176,12 +176,14 @@ public sealed class ConviteService(
                 convite.UserId,
                 new ConviteRecebido(convite.Id, campanha.Campanha.Id, campanha.Campanha.Nome, campanha.Mestre.Nome, campanha.Mestre.Nick),
                 cancellationToken);
+            await ConviteMudouAsync(convite, AcoesDeConvite.Criado, cancellationToken);
         }
     }
 
     /// <summary>
     /// Só o convidado, e só pendente. Vira jogador e a campanha entra no início da grade dele, tudo junto. Depois, o
-    /// mestre recebe o aviso nº 10, os outros jogadores, o nº 13, e o grupo da campanha, o MemberChanged.
+    /// mestre recebe o aviso nº 10 e o InvitesChanged, os outros jogadores, o nº 13, e o grupo da campanha, o
+    /// MemberChanged.
     /// </summary>
     public async Task<Resultado<Vazio>> AceitarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -211,11 +213,12 @@ public sealed class ConviteService(
         }
 
         await AvisarEntradaAsync(convite.Valor!, cancellationToken);
+        await ConviteMudouAsync(convite.Valor!, AcoesDeConvite.Aceito, cancellationToken);
         return Vazio.Valor;
     }
 
     /// <summary>
-    /// Só o convidado, e só pendente. O mestre recebe o aviso nº 11.
+    /// Só o convidado, e só pendente. O mestre recebe o aviso nº 11 e o InvitesChanged.
     /// </summary>
     public async Task<Resultado<Vazio>> RecusarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -237,12 +240,13 @@ public sealed class ConviteService(
                 cancellationToken);
         }
 
+        await ConviteMudouAsync(convite.Valor, AcoesDeConvite.Recusado, cancellationToken);
         return Vazio.Valor;
     }
 
     /// <summary>
     /// Só o mestre, e só pendente. O convidado e os jogadores recebem 403; quem não participa, 404. O convidado recebe
-    /// o aviso nº 12.
+    /// o aviso nº 12, e o mestre, o InvitesChanged.
     /// </summary>
     public async Task<Resultado<Vazio>> CancelarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -271,17 +275,19 @@ public sealed class ConviteService(
         convite.Cancelar(relogio.GetUtcNow());
         await convites.SalvarAlteracoesAsync(cancellationToken);
         await notificador.NotificarAsync(convite.UserId, new ConviteCancelado(acesso.Valor!.Id, acesso.Valor.Nome), cancellationToken);
+        await ConviteMudouAsync(convite, AcoesDeConvite.Cancelado, cancellationToken);
         return Vazio.Valor;
     }
 
     /// <summary>
-    /// A amizade foi desfeita: os convites pendentes entre os dois, nos dois sentidos, ficam cancelados.
+    /// A amizade foi desfeita: os convites pendentes entre os dois, nos dois sentidos, ficam cancelados. Depois de
+    /// confirmar, o convidado recebe o aviso nº 12, e o mestre, o InvitesChanged.
     /// </summary>
-    public async Task<IReadOnlyList<AvisoParaEnviar>> CancelarPendentesEntreAsync(
+    public async Task<Func<CancellationToken, Task>> CancelarPendentesEntreAsync(
         Guid usuarioA, Guid usuarioB, CancellationToken cancellationToken)
     {
         var agora = relogio.GetUtcNow();
-        var avisos = new List<AvisoParaEnviar>();
+        var cancelados = new List<(ConviteDeCampanha Convite, Campanha Campanha)>();
         foreach (var (mestre, convidado) in new[] { (usuarioA, usuarioB), (usuarioB, usuarioA) })
         {
             foreach (var convite in await convites.PendentesEntreAsync(mestre, convidado, cancellationToken))
@@ -289,12 +295,19 @@ public sealed class ConviteService(
                 convite.Cancelar(agora);
                 var campanha = await campanhas.BuscarPorIdAsync(convite.CampaignId, cancellationToken)
                     ?? throw new InvalidOperationException($"A campanha {convite.CampaignId} sumiu no meio da requisição.");
-                avisos.Add(new AvisoParaEnviar(convite.UserId, new ConviteCancelado(campanha.Id, campanha.Nome)));
+                cancelados.Add((convite, campanha));
             }
         }
 
         await convites.SalvarAlteracoesAsync(cancellationToken);
-        return avisos;
+        return async depoisCancellationToken =>
+        {
+            foreach (var (convite, campanha) in cancelados)
+            {
+                await notificador.NotificarAsync(convite.UserId, new ConviteCancelado(campanha.Id, campanha.Nome), depoisCancellationToken);
+                await ConviteMudouAsync(convite, AcoesDeConvite.Cancelado, depoisCancellationToken);
+            }
+        };
     }
 
     /// <summary>
@@ -316,6 +329,15 @@ public sealed class ConviteService(
             .. (colidiram.Count > 0 ? colidiram : userIds).Select(id => new ConvidadoInvalido(id, MotivosDeConvite.JaConvidado)),
         ]);
     }
+
+    // O InvitesChanged para o grupo do mestre, com o convite como ficou e o convidado com os dados de agora.
+    private async Task ConviteMudouAsync(ConviteDeCampanha convite, string acao, CancellationToken cancellationToken) =>
+        await eventos.ConviteMudouAsync(
+            convite.CampaignId,
+            acao,
+            new ConviteDoEvento(
+                convite.Id, convite.Status.ToString().ToLowerInvariant(), await PessoaAsync(convite.UserId, cancellationToken), convite.CreatedAt),
+            cancellationToken);
 
     // Com os nomes de agora: a campanha, o mestre e quem entrou (como ficou gravado).
     private async Task AvisarEntradaAsync(ConviteDeCampanha convite, CancellationToken cancellationToken)

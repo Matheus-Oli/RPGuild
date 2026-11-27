@@ -17,5 +17,9 @@ public sealed class HubCampanhaTempoReal(IHubContext<CampaignHub> hub) : ICampan
     public Task CampanhaExcluidaAsync(CampanhaExcluidaEvento evento, CancellationToken cancellationToken) =>
         Todos(evento.CampanhaId).SendAsync(CampaignHub.Eventos.CampaignDeleted, evento, cancellationToken);
 
+    public Task ConvitesMudaramAsync(ConvitesMudaramEvento evento, CancellationToken cancellationToken) =>
+        hub.Clients.Group(GruposDaCampanha.Mestre(evento.CampanhaId))
+            .SendAsync(CampaignHub.Eventos.InvitesChanged, evento, cancellationToken);
+
     private IClientProxy Todos(Guid campanhaId) => hub.Clients.Group(GruposDaCampanha.Todos(campanhaId));
 }

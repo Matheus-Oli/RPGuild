@@ -25,6 +25,11 @@ public sealed class EventosDaCampanha(ICampanhaTempoReal tempoReal, ILogger<Even
         EmpurrarAsync(
             "campanha excluída", () => tempoReal.CampanhaExcluidaAsync(new CampanhaExcluidaEvento(campanhaId, campanhaNome), cancellationToken));
 
+    public Task ConviteMudouAsync(
+        Guid campanhaId, string acao, ConviteDoEvento convite, CancellationToken cancellationToken) =>
+        EmpurrarAsync(
+            "convites mudaram", () => tempoReal.ConvitesMudaramAsync(new ConvitesMudaramEvento(campanhaId, acao, convite), cancellationToken));
+
     private async Task EmpurrarAsync(string evento, Func<Task> empurrar)
     {
         try

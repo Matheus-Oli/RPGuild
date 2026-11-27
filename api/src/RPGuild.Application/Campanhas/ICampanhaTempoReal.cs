@@ -20,6 +20,11 @@ public interface ICampanhaTempoReal
     /// Para o grupo da campanha.
     /// </summary>
     Task CampanhaExcluidaAsync(CampanhaExcluidaEvento evento, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Só para o grupo do mestre: os jogadores não veem os convites.
+    /// </summary>
+    Task ConvitesMudaramAsync(ConvitesMudaramEvento evento, CancellationToken cancellationToken);
 }
 
 /// <param name="Tipo">"entrou" (e, no módulo de saída de player, "saiu").</param>
@@ -33,6 +38,20 @@ public sealed record CampanhaAtualizadaEvento(
     Guid Id, string Nome, string? Descricao, SistemaDaCampanhaResponse Sistema, string? CapaUrl, string? BannerUrl);
 
 public sealed record CampanhaExcluidaEvento(Guid CampanhaId, string CampanhaNome);
+
+/// <param name="Acao">"criado", "aceito", "recusado" ou "cancelado".</param>
+public sealed record ConvitesMudaramEvento(Guid CampanhaId, string Acao, ConviteDoEvento Convite);
+
+/// <param name="Status">O status depois da ação: pendente, aceito, recusado ou cancelado.</param>
+public sealed record ConviteDoEvento(Guid Id, string Status, PessoaDaCampanhaResponse Convidado, DateTimeOffset CriadoEm);
+
+public static class AcoesDeConvite
+{
+    public const string Criado = "criado";
+    public const string Aceito = "aceito";
+    public const string Recusado = "recusado";
+    public const string Cancelado = "cancelado";
+}
 
 public static class TiposDeMudancaDeMembro
 {
