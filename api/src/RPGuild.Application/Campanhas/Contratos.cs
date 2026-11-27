@@ -46,7 +46,15 @@ public sealed record CampanhaDetalheResponse(
 /// <param name="EntrouEm">Para o mestre, a criação da campanha.</param>
 /// <param name="Ficha">Sempre null por enquanto (módulo de Fichas).</param>
 public sealed record MembroDaCampanhaResponse(
-    Guid UserId, string Nome, string Nick, string? AvatarUrl, string Papel, DateTimeOffset EntrouEm, object? Ficha);
+    Guid UserId, string Nome, string Nick, string? AvatarUrl, string Papel, DateTimeOffset EntrouEm, object? Ficha)
+{
+    /// <summary>
+    /// O membro como sai no GET /campaigns/{id}/members e no MemberChanged.
+    /// </summary>
+    public static MembroDaCampanhaResponse De(PessoaGuardada pessoa, string papel, DateTimeOffset entrouEm, Func<string?, string?> url) =>
+        // TODO(fichas): classe, nível e PV da ficha do jogador.
+        new(pessoa.Id, pessoa.Nome, pessoa.Nick, url(pessoa.AvatarPath), papel, entrouEm, Ficha: null);
+}
 
 public static class PapeisNaCampanha
 {

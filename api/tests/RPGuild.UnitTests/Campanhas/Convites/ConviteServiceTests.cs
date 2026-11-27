@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using RPGuild.Application.Campanhas;
 using RPGuild.Application.Comum;
@@ -58,6 +59,7 @@ public class ConviteServiceTests
             identity,
             Substitute.For<IStorageService>(),
             Substitute.For<INotificador>(),
+            new EventosDaCampanha(Substitute.For<ICampanhaTempoReal>(), NullLogger<EventosDaCampanha>.Instance),
             new FakeTimeProvider(Agora));
     }
 

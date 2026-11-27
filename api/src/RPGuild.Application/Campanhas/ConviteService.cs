@@ -21,6 +21,7 @@ public sealed class ConviteService(
     IIdentityService identity,
     IStorageService storage,
     INotificador notificador,
+    EventosDaCampanha eventos,
     TimeProvider relogio) : IConvitesEntreAmigos
 {
     /// <summary>
@@ -180,7 +181,7 @@ public sealed class ConviteService(
 
     /// <summary>
     /// Só o convidado, e só pendente. Vira jogador e a campanha entra no início da grade dele, tudo junto. Depois, o
-    /// mestre recebe o aviso nº 10 e os outros jogadores, o nº 13.
+    /// mestre recebe o aviso nº 10, os outros jogadores, o nº 13, e o grupo da campanha, o MemberChanged.
     /// </summary>
     public async Task<Resultado<Vazio>> AceitarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
     {
@@ -316,16 +317,16 @@ public sealed class ConviteService(
         ]);
     }
 
-    // Com os nomes de agora: a campanha, o mestre e quem entrou.
+    // Com os nomes de agora: a campanha, o mestre e quem entrou (como ficou gravado).
     private async Task AvisarEntradaAsync(ConviteDeCampanha convite, CancellationToken cancellationToken)
     {
         var campanha = await campanhas.BuscarComPessoasAsync(convite.CampaignId, cancellationToken);
-        if (campanha is null)
+        if (campanha?.Jogadores.SingleOrDefault(j => j.Pessoa.Id == convite.UserId) is not { } entrou)
         {
             return;
         }
 
-        var quem = await PessoaGuardadaAsync(convite.UserId, cancellationToken);
+        var quem = entrou.Pessoa;
         var nome = campanha.Campanha.Nome;
         await notificador.NotificarAsync(
             campanha.Campanha.OwnerId, new ConviteAceito(convite.Id, campanha.Campanha.Id, nome, quem.Id, quem.Nome, quem.Nick), cancellationToken);
@@ -335,6 +336,9 @@ public sealed class ConviteService(
             await notificador.NotificarAsync(
                 jogador.Pessoa.Id, new JogadorEntrou(campanha.Campanha.Id, nome, quem.Id, quem.Nome, quem.Nick), cancellationToken);
         }
+
+        await eventos.JogadorEntrouAsync(
+            campanha.Campanha.Id, MembroDaCampanhaResponse.De(quem, PapeisNaCampanha.Jogador, entrou.EntrouEm, Url), cancellationToken);
     }
 
     // Para quem não é o convidado, o convite "não existe" (404).

@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<SistemasService>();
         services.AddScoped<GradeDeCampanhas>();
         services.AddScoped<AcessoACampanha>();
+        services.AddScoped<EventosDaCampanha>();
         services.AddScoped<ConviteService>();
         services.AddScoped<IConvitesEntreAmigos>(sp => sp.GetRequiredService<ConviteService>());
         services.AddScoped<CampanhaService>();

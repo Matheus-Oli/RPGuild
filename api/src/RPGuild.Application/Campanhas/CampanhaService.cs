@@ -248,8 +248,7 @@ public sealed class CampanhaService(
     }
 
     private MembroDaCampanhaResponse Membro(PessoaGuardada pessoa, string papel, DateTimeOffset entrouEm) =>
-        // TODO(fichas): classe, nível e PV da ficha do jogador.
-        new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath), papel, entrouEm, Ficha: null);
+        MembroDaCampanhaResponse.De(pessoa, papel, entrouEm, Url);
 
     private PessoaDaCampanhaResponse Pessoa(PessoaGuardada pessoa) => new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath));
 
