@@ -275,7 +275,7 @@ Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
 | Endpoint | Entrada | Saída |
 | --- | --- | --- |
 | `GET /api/systems` | — | 200 `[{slug, nome, ativo}]` |
-| `POST /api/campaigns` | `{nome, descricao?, sistema, capaPath?, bannerPath?, convidados?}` | 201 detalhe · 400 · 409 |
+| `POST /api/campaigns` | `{nome, descricao?, sistema, capaPath?, bannerPath?, convidados?}` | 201 detalhe · 400 |
 | `GET /api/campaigns` | — | 200 `[card]`, na ordem da grade do usuário |
 | `PUT /api/campaigns/order` | `{campaignIds[]}` | 204 · 400 |
 | `GET /api/campaigns/{id}` | — | 200 detalhe · 404 |
