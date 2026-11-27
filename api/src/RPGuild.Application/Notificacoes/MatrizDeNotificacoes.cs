@@ -13,6 +13,7 @@ public static class TiposDeNotificacao
     public const string AmizadeRecebida = "amizade_recebida";
     public const string AmizadeAceita = "amizade_aceita";
     public const string AmizadeRecusada = "amizade_recusada";
+    public const string CampanhaEditada = "campanha_editada";
 }
 
 public enum EnvioPorEmail
@@ -48,6 +49,7 @@ public static class MatrizDeNotificacoes
         [TiposDeNotificacao.AmizadeRecebida] = new(Sininho: true, EnvioPorEmail.Fila),
         [TiposDeNotificacao.AmizadeAceita] = new(Sininho: true, EnvioPorEmail.Nenhum),
         [TiposDeNotificacao.AmizadeRecusada] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.CampanhaEditada] = new(Sininho: true, EnvioPorEmail.Nenhum),
     };
 
     public static CanaisDaNotificacao CanaisDe(string tipo) =>

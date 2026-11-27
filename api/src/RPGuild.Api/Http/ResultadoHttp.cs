@@ -21,6 +21,7 @@ public static class ResultadoHttp
         TipoErro.Conflito => StatusCodes.Status409Conflict,
         TipoErro.Bloqueado => StatusCodes.Status423Locked,
         TipoErro.NaoEncontrado => StatusCodes.Status404NotFound,
+        TipoErro.Proibido => StatusCodes.Status403Forbidden,
         _ => StatusCodes.Status500InternalServerError,
     };
 }

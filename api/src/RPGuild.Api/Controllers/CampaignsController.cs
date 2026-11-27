@@ -42,6 +42,17 @@ public sealed class CampaignsController(CampanhaService campanhas, GradeDeCampan
         return this.ParaResposta(resultado, membros => Ok(membros));
     }
 
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType<CampanhaDetalheResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Editar(Guid id, EditarCampanhaRequest request, CancellationToken cancellationToken)
+    {
+        var resultado = await campanhas.EditarAsync(User.Id(), id, request, cancellationToken);
+        return this.ParaResposta(resultado, detalhe => Ok(detalhe));
+    }
+
     [HttpPut("order")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

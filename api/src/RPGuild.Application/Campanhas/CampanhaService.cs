@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using RPGuild.Application.Comum;
+using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Campanhas;
 
@@ -10,7 +12,9 @@ public sealed class CampanhaService(
     GradeDeCampanhas grade,
     AcessoACampanha acessos,
     IStorageService storage,
-    TimeProvider relogio)
+    INotificador notificador,
+    TimeProvider relogio,
+    ILogger<CampanhaService> logger)
 {
     /// <summary>
     /// Quem cria é o mestre, e a campanha entra no início da grade dele. O request já chega validado.
@@ -38,6 +42,44 @@ public sealed class CampanhaService(
         var criada = await campanhas.BuscarComPessoasAsync(campanha.Id, cancellationToken)
             ?? throw new InvalidOperationException($"A campanha {campanha.Id} sumiu logo depois de criada.");
         return Detalhe(criada, userId);
+    }
+
+    /// <summary>
+    /// Só o mestre. O sistema não muda. Capa ou banner trocados ou removidos são apagados do storage, e os jogadores
+    /// recebem o aviso nº 17 se algo mudou.
+    /// </summary>
+    public async Task<Resultado<CampanhaDetalheResponse>> EditarAsync(
+        Guid userId, Guid campanhaId, EditarCampanhaRequest request, CancellationToken cancellationToken)
+    {
+        var acesso = await acessos.DeMestreAsync(userId, campanhaId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!;
+        }
+
+        if (!ImagensDoUsuario(userId, request.CapaPath, request.BannerPath))
+        {
+            return ErrosDeCampanha.ImagemForaDaPasta;
+        }
+
+        var campanha = acesso.Valor!;
+        string?[] imagensAntigas = [campanha.CapaPath, campanha.BannerPath];
+        var mudou = campanha.Editar(request.Nome.Trim(), request.Descricao, request.CapaPath, request.BannerPath, relogio.GetUtcNow());
+        await campanhas.SalvarAlteracoesAsync(cancellationToken);
+
+        await ApagarImagensAsync(imagensAntigas.Where(path => path != campanha.CapaPath && path != campanha.BannerPath), cancellationToken);
+
+        var editada = await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken)
+            ?? throw new InvalidOperationException($"A campanha {campanhaId} sumiu logo depois de editada.");
+        if (mudou)
+        {
+            foreach (var jogador in editada.Jogadores)
+            {
+                await notificador.NotificarAsync(jogador.Pessoa.Id, new CampanhaEditada(campanha.Id, campanha.Nome), cancellationToken);
+            }
+        }
+
+        return Detalhe(editada, userId);
     }
 
     public async Task<IReadOnlyList<CampanhaCardResponse>> ListarAsync(Guid userId, CancellationToken cancellationToken) =>
@@ -81,6 +123,22 @@ public sealed class CampanhaService(
         return await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken) is { } guardada
             ? guardada
             : ErrosDeCampanha.CampanhaNaoEncontrada;
+    }
+
+    // A campanha já foi salva: um arquivo órfão no bucket não justifica falhar a requisição.
+    private async Task ApagarImagensAsync(IEnumerable<string?> paths, CancellationToken cancellationToken)
+    {
+        foreach (var path in paths.OfType<string>())
+        {
+            try
+            {
+                await storage.ApagarAsync(path, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Falha ao apagar a imagem de campanha {Path} do storage", path);
+            }
+        }
     }
 
     // Mesma regra do avatar: só vale imagem que o próprio usuário subiu (campaigns/{userId}/...).

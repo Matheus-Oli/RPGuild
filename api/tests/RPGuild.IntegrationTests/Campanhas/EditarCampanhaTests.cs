@@ -33,8 +33,8 @@ public sealed class EditarCampanhaTests(PostgresFixture postgres) : IDisposable
         detalhe.CapaUrl.ShouldBe(_factory.Storage.ObterUrlPublica(capa));
         detalhe.BannerUrl.ShouldBe(_factory.Storage.ObterUrlPublica(banner));
         detalhe.Papel.ShouldBe("mestre");
-        (await (await _factory.GetAsync(mestre, CampanhasDeTeste.Campanha(criada.Id))).Content.ReadFromJsonAsync<DetalheResponse>())
-            .ShouldBe(detalhe, "o GET devolve o mesmo que o PUT");
+        (await (await _factory.GetAsync(mestre, CampanhasDeTeste.Campanha(criada.Id))).Content.ReadAsStringAsync())
+            .ShouldBe(await resposta.Content.ReadAsStringAsync(), "o GET devolve o mesmo que o PUT");
     }
 
     [Fact]

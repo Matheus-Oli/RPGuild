@@ -22,4 +22,18 @@ public sealed class AcessoACampanha(ICampanhaRepository campanhas)
 
         return campanha;
     }
+
+    /// <summary>
+    /// Só o mestre. Um jogador recebe 403; quem não participa, 404.
+    /// </summary>
+    public async Task<Resultado<Campanha>> DeMestreAsync(Guid userId, Guid campanhaId, CancellationToken cancellationToken)
+    {
+        var acesso = await DeMembroAsync(userId, campanhaId, cancellationToken);
+        if (acesso.Sucesso && acesso.Valor!.OwnerId != userId)
+        {
+            return ErrosDeCampanha.SoOMestre;
+        }
+
+        return acesso;
+    }
 }

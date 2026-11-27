@@ -33,3 +33,6 @@ public sealed record AmizadeAceita(Guid UserId, string Nome, string Nick) : Avis
 
 /// <summary>Nº 7, para quem enviou o pedido, com quem recusou.</summary>
 public sealed record AmizadeRecusada(Guid UserId, string Nome, string Nick) : Aviso(TiposDeNotificacao.AmizadeRecusada);
+
+/// <summary>Nº 17, para os jogadores, com o nome depois da edição.</summary>
+public sealed record CampanhaEditada(Guid CampanhaId, string CampanhaNome) : Aviso(TiposDeNotificacao.CampanhaEditada);

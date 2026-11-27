@@ -10,6 +10,9 @@ public static class ErrosDeCampanha
     public static readonly Erro CampanhaNaoEncontrada = new(
         TipoErro.NaoEncontrado, "Campanha não encontrada", "A campanha não existe ou você não participa dela.");
 
+    public static readonly Erro SoOMestre = new(
+        TipoErro.Proibido, "Só o mestre", "Só o mestre da campanha pode fazer isso.");
+
     public static readonly Erro SistemaIndisponivel = new(
         TipoErro.Validacao, "Sistema indisponível", "Escolha um dos sistemas disponíveis para campanha nova.");
 
