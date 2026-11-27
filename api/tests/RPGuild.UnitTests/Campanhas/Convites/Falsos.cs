@@ -76,6 +76,9 @@ public sealed class ConviteRepositoryFalso : IConviteRepository
         Task.FromResult<IReadOnlyList<ConviteDeCampanha>>([.. Convites.Where(c => c.CampaignId == campanhaId && c.EstaPendente)]);
 
     // Consultas com join: cobertas pelos testes de integração.
+    public Task<IReadOnlyList<ConviteDeCampanha>> PendentesEntreAsync(Guid mestreId, Guid convidadoId, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task<IReadOnlyList<ConviteComConvidado>> ListarPendentesDaCampanhaAsync(Guid campanhaId, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 

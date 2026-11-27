@@ -11,6 +11,8 @@ public sealed class AmizadeService(
     IIdentityService identity,
     IStorageService storage,
     INotificador notificador,
+    IConvitesEntreAmigos convites,
+    ITransacao transacao,
     TimeProvider relogio)
 {
     /// <summary>
@@ -140,6 +142,7 @@ public sealed class AmizadeService(
 
     /// <summary>
     /// Qualquer um dos dois pode desfazer a amizade: a linha é apagada e quem foi removido não é avisado (aviso nº 8).
+    /// Os convites de campanha pendentes entre os dois são cancelados junto, e o convidado recebe o aviso nº 12.
     /// </summary>
     public async Task<Resultado<Vazio>> RemoverAmigoAsync(Guid userId, Guid amigoId, CancellationToken cancellationToken)
     {
@@ -149,8 +152,21 @@ public sealed class AmizadeService(
             return ErrosDaTaberna.AmizadeNaoEncontrada;
         }
 
-        amizades.Remover(amizade);
-        await amizades.SalvarAlteracoesAsync(cancellationToken);
+        IReadOnlyList<AvisoParaEnviar> avisos = [];
+        await transacao.ExecutarAsync(
+            async () =>
+            {
+                amizades.Remover(amizade);
+                await amizades.SalvarAlteracoesAsync(cancellationToken);
+                avisos = await convites.CancelarPendentesEntreAsync(userId, amigoId, cancellationToken);
+            },
+            cancellationToken);
+
+        foreach (var aviso in avisos)
+        {
+            await notificador.NotificarAsync(aviso.UserId, aviso.Aviso, cancellationToken);
+        }
+
         return Vazio.Valor;
     }
 

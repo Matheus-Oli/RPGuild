@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<GradeDeCampanhas>();
         services.AddScoped<AcessoACampanha>();
         services.AddScoped<ConviteService>();
+        services.AddScoped<IConvitesEntreAmigos>(sp => sp.GetRequiredService<ConviteService>());
         services.AddScoped<CampanhaService>();
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<EnvioDeEmail>();

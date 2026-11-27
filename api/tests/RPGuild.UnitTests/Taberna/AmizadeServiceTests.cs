@@ -5,6 +5,7 @@ using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Taberna;
 using RPGuild.Application.Uploads;
 using RPGuild.Domain.Taberna;
+using RPGuild.UnitTests.Campanhas.Convites;
 
 namespace RPGuild.UnitTests.Taberna;
 
@@ -34,6 +35,8 @@ public class AmizadeServiceTests
             _identity,
             Substitute.For<IStorageService>(),
             Substitute.For<INotificador>(),
+            Substitute.For<IConvitesEntreAmigos>(),
+            new TransacaoFalsa(),
             _relogio);
     }
 

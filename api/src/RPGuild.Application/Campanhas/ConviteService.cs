@@ -21,7 +21,7 @@ public sealed class ConviteService(
     IIdentityService identity,
     IStorageService storage,
     INotificador notificador,
-    TimeProvider relogio)
+    TimeProvider relogio) : IConvitesEntreAmigos
 {
     /// <summary>
     /// Só o mestre. Tudo ou nada: se alguém da lista não pode ser convidado, ninguém é. O request já chega validado.
@@ -254,6 +254,29 @@ public sealed class ConviteService(
         await convites.SalvarAlteracoesAsync(cancellationToken);
         await notificador.NotificarAsync(convite.UserId, new ConviteCancelado(acesso.Valor!.Id, acesso.Valor.Nome), cancellationToken);
         return Vazio.Valor;
+    }
+
+    /// <summary>
+    /// A amizade foi desfeita: os convites pendentes entre os dois, nos dois sentidos, ficam cancelados.
+    /// </summary>
+    public async Task<IReadOnlyList<AvisoParaEnviar>> CancelarPendentesEntreAsync(
+        Guid usuarioA, Guid usuarioB, CancellationToken cancellationToken)
+    {
+        var agora = relogio.GetUtcNow();
+        var avisos = new List<AvisoParaEnviar>();
+        foreach (var (mestre, convidado) in new[] { (usuarioA, usuarioB), (usuarioB, usuarioA) })
+        {
+            foreach (var convite in await convites.PendentesEntreAsync(mestre, convidado, cancellationToken))
+            {
+                convite.Cancelar(agora);
+                var campanha = await campanhas.BuscarPorIdAsync(convite.CampaignId, cancellationToken)
+                    ?? throw new InvalidOperationException($"A campanha {convite.CampaignId} sumiu no meio da requisição.");
+                avisos.Add(new AvisoParaEnviar(convite.UserId, new ConviteCancelado(campanha.Id, campanha.Nome)));
+            }
+        }
+
+        await convites.SalvarAlteracoesAsync(cancellationToken);
+        return avisos;
     }
 
     // Com os nomes de agora: a campanha, o mestre e quem entrou.

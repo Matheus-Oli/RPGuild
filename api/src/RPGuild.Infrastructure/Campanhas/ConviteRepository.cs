@@ -18,6 +18,16 @@ public sealed class ConviteRepository(AppDbContext db) : IConviteRepository
             .Where(c => c.CampaignId == campanhaId && c.Status == StatusDoConvite.Pendente)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ConviteDeCampanha>> PendentesEntreAsync(
+        Guid mestreId, Guid convidadoId, CancellationToken cancellationToken) =>
+        await (
+            from c in db.ConvitesDeCampanha
+            where c.UserId == convidadoId && c.Status == StatusDoConvite.Pendente
+            join campanha in db.Campanhas on c.CampaignId equals campanha.Id
+            where campanha.OwnerId == mestreId
+            select c)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<ConviteComConvidado>> ListarPendentesDaCampanhaAsync(
         Guid campanhaId, CancellationToken cancellationToken) =>
         await (

@@ -9,6 +9,11 @@ namespace RPGuild.Application.Notificacoes;
 /// </summary>
 public abstract record Aviso([property: JsonIgnore] string Tipo);
 
+/// <summary>
+/// Um aviso preparado para mandar depois (ex.: só depois de confirmar uma transação).
+/// </summary>
+public sealed record AvisoParaEnviar(Guid UserId, Aviso Aviso);
+
 /// <summary>Nº 1.</summary>
 public sealed record BoasVindas() : Aviso(TiposDeNotificacao.BoasVindas);
 

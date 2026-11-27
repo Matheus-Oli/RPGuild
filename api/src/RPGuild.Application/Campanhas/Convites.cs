@@ -67,6 +67,11 @@ public interface IConviteRepository
     Task<IReadOnlyList<ConviteDeCampanha>> PendentesDaCampanhaAsync(Guid campanhaId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Os pendentes para <paramref name="convidadoId"/> em campanhas de <paramref name="mestreId"/>.
+    /// </summary>
+    Task<IReadOnlyList<ConviteDeCampanha>> PendentesEntreAsync(Guid mestreId, Guid convidadoId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Os pendentes da campanha com o convidado, os mais novos primeiro.
     /// </summary>
     Task<IReadOnlyList<ConviteComConvidado>> ListarPendentesDaCampanhaAsync(Guid campanhaId, CancellationToken cancellationToken);
