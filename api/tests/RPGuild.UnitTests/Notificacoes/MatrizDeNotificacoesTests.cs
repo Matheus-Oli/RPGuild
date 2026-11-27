@@ -16,6 +16,8 @@ public class MatrizDeNotificacoesTests
     [InlineData(TiposDeNotificacao.CampanhaEditada, true, EnvioPorEmail.Nenhum)]
     [InlineData(TiposDeNotificacao.CampanhaExcluida, true, EnvioPorEmail.Fila)]
     [InlineData(TiposDeNotificacao.ConviteRecebido, true, EnvioPorEmail.Fila)]
+    [InlineData(TiposDeNotificacao.ConviteAceito, true, EnvioPorEmail.Nenhum)]
+    [InlineData(TiposDeNotificacao.JogadorEntrou, true, EnvioPorEmail.Fila)]
     public void CanaisDe_TipoConhecido_TemOsCanaisDaMatriz(string tipo, bool sininho, EnvioPorEmail email)
     {
         // Act
@@ -40,6 +42,8 @@ public class MatrizDeNotificacoesTests
         TiposDeNotificacao.CampanhaEditada.ShouldBe("campanha_editada");
         TiposDeNotificacao.CampanhaExcluida.ShouldBe("campanha_excluida");
         TiposDeNotificacao.ConviteRecebido.ShouldBe("convite_recebido");
+        TiposDeNotificacao.ConviteAceito.ShouldBe("convite_aceito");
+        TiposDeNotificacao.JogadorEntrou.ShouldBe("jogador_entrou");
     }
 
     [Theory]
