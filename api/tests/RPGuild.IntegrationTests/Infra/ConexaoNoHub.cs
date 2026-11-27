@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 namespace RPGuild.IntegrationTests.Infra;
 
 /// <summary>
-/// Conexão no hub de notificações pelo TestServer, guardando os eventos recebidos.
+/// Conexão num hub (notificações ou campanha) pelo TestServer, guardando os eventos recebidos.
 /// Transporte LongPolling (o handler do TestServer atende HTTP), com o token na query "access_token",
 /// como o navegador faz no WebSocket; o cliente não manda header Authorization.
 /// </summary>
@@ -14,8 +14,14 @@ public sealed class ConexaoNoHub : IAsyncDisposable
 {
     public const string Rota = "/hubs/notifications";
 
-    public static readonly string[] Eventos =
-        ["NotificationCreated", "UnreadCount", "NotificationRead", "NotificationsReadAll", "NotificationDeleted"];
+    public const string RotaDaCampanha = "/hubs/campaign";
+
+    // Os eventos que cada hub empurra: a conexão escuta todos os do hub em que entrou.
+    private static readonly Dictionary<string, string[]> EventosDoHub = new()
+    {
+        [Rota] = ["NotificationCreated", "UnreadCount", "NotificationRead", "NotificationsReadAll", "NotificationDeleted"],
+        [RotaDaCampanha] = ["MemberChanged", "CampaignUpdated", "CampaignDeleted", "InvitesChanged"],
+    };
 
     private static readonly TimeSpan EsperaPadrao = TimeSpan.FromSeconds(5);
 
@@ -23,10 +29,10 @@ public sealed class ConexaoNoHub : IAsyncDisposable
     private readonly ConcurrentQueue<EventoRecebido> _recebidos = new();
     private readonly SemaphoreSlim _chegou = new(0);
 
-    private ConexaoNoHub(HubConnection conexao)
+    private ConexaoNoHub(HubConnection conexao, string rota)
     {
         _conexao = conexao;
-        foreach (var evento in Eventos)
+        foreach (var evento in EventosDoHub[rota])
         {
             _conexao.On<JsonElement>(evento, payload =>
             {
@@ -39,11 +45,12 @@ public sealed class ConexaoNoHub : IAsyncDisposable
     public IReadOnlyCollection<EventoRecebido> Recebidos => _recebidos;
 
     /// <summary>
-    /// Abre a conexão. Sem token (null), a conexão vai sem credencial. Lança se o hub recusar.
+    /// Abre a conexão no hub da rota (o de notificações, se não disser). Sem token (null), a conexão vai sem credencial.
+    /// Lança se o hub recusar.
     /// </summary>
-    public static async Task<ConexaoNoHub> AbrirAsync(RPGuildApiFactory factory, string? accessToken)
+    public static async Task<ConexaoNoHub> AbrirAsync(RPGuildApiFactory factory, string? accessToken, string rota = Rota)
     {
-        var url = $"https://localhost{Rota}" + (accessToken is null ? string.Empty : $"?access_token={Uri.EscapeDataString(accessToken)}");
+        var url = $"https://localhost{rota}" + (accessToken is null ? string.Empty : $"?access_token={Uri.EscapeDataString(accessToken)}");
         var servidor = factory.Server;
 
         var conexao = new HubConnectionBuilder()
@@ -54,7 +61,7 @@ public sealed class ConexaoNoHub : IAsyncDisposable
             })
             .Build();
 
-        var noHub = new ConexaoNoHub(conexao);
+        var noHub = new ConexaoNoHub(conexao, rota);
         try
         {
             await conexao.StartAsync();
@@ -104,6 +111,16 @@ public sealed class ConexaoNoHub : IAsyncDisposable
 
         _recebidos.ShouldNotContain(r => r.Evento == evento, $"O evento {evento} não devia ter chegado.");
     }
+
+    /// <summary>
+    /// Chama o JoinCampaign do hub de campanha. Lança HubException se o hub recusar.
+    /// </summary>
+    public Task EntrarNaCampanhaAsync(Guid campanhaId) => _conexao.InvokeAsync("JoinCampaign", campanhaId);
+
+    /// <summary>
+    /// Chama o LeaveCampaign do hub de campanha.
+    /// </summary>
+    public Task SairDaCampanhaAsync(Guid campanhaId) => _conexao.InvokeAsync("LeaveCampaign", campanhaId);
 
     /// <summary>
     /// Esquece os eventos já recebidos, para o próximo passo do teste só enxergar os novos.
