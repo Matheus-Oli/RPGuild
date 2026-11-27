@@ -63,7 +63,7 @@ public static class CardDoConvite
         var mestre = Pessoa(campanha.Mestre);
         return new CardDoConviteResponse(
             convite.Id,
-            convite.Status.ToString().ToLowerInvariant(),
+            convite.Status.Texto(),
             PodeResponder: quemPede == convite.UserId && convite.EstaPendente,
             new CampanhaDoCardResponse(
                 campanha.Campanha.Id,

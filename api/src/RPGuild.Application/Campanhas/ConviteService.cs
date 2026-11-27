@@ -335,8 +335,7 @@ public sealed class ConviteService(
         await eventos.ConviteMudouAsync(
             convite.CampaignId,
             acao,
-            new ConviteDoEvento(
-                convite.Id, convite.Status.ToString().ToLowerInvariant(), await PessoaAsync(convite.UserId, cancellationToken), convite.CreatedAt),
+            new ConviteDoEvento(convite.Id, convite.Status.Texto(), await PessoaAsync(convite.UserId, cancellationToken), convite.CreatedAt),
             cancellationToken);
 
     // Com os nomes de agora: a campanha, o mestre e quem entrou (como ficou gravado).

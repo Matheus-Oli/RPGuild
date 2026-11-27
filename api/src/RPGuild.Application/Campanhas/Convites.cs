@@ -41,6 +41,14 @@ public sealed record ConviteGuardado(
 /// <param name="Motivo">Um dos <see cref="MotivosDeConvite"/>.</param>
 public sealed record ConvidadoInvalido(Guid UserId, string Motivo);
 
+public static class TextoDoStatus
+{
+    /// <summary>
+    /// O status como sai nas respostas e nos eventos: pendente, aceito, recusado ou cancelado.
+    /// </summary>
+    public static string Texto(this StatusDoConvite status) => status.ToString().ToLowerInvariant();
+}
+
 public static class MotivosDeConvite
 {
     /// <summary>Não é amigo do mestre (400).</summary>

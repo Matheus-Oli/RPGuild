@@ -35,7 +35,7 @@ public sealed class CampaignHub(AcessoACampanha acessos) : Hub
         var acesso = await acessos.DeMembroAsync(userId, campanhaId, Context.ConnectionAborted);
         if (!acesso.Sucesso)
         {
-            throw new HubException("Campanha não encontrada");
+            throw new HubException(ErrosDeCampanha.CampanhaNaoEncontrada.Titulo);
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GruposDaCampanha.Todos(campanhaId), Context.ConnectionAborted);
