@@ -371,6 +371,10 @@ Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
 9. **Amizade desfeita** (`DELETE /api/friends/{userId}`, de qualquer lado): os convites pendentes entre os dois (campanhas em que um é mestre e o outro é o convidado, nos dois sentidos) são cancelados na mesma transação da remoção, e cada convidado recebe o nº 12. Convites aceitos não mudam. A Taberna chama Campanhas pela porta `IConvitesEntreAmigos`.
 10. **Campanha excluída:** quem tinha convite pendente recebe o nº 12 (lido antes de apagar; os convites vão junto pelo cascade). Os jogadores continuam recebendo o nº 18.
 
+11. **Corridas** (no padrão da Taberna, pelo 23505 do Postgres):
+    - Dois convites simultâneos para a mesma pessoa batem no índice `ix_campaign_invites_pendente` e dão **409** com `ja_convidado` na extensão `convidados`. Vem só quem colidiu; se o banco não mostrar ninguém, vem a lista toda.
+    - Dois aceites simultâneos do mesmo convite batem na PK `pk_campaign_members` e dão **409** "não está mais pendente". A transação desfaz o status, o jogador e a grade, e nenhum aviso sai.
+
 Modelo: `campaign_invites` (`id`, `campaign_id` com cascade, `invited_by`, `user_id`, `status`, `created_at`, `responded_at`), migration `AddConvitesDeCampanha`. Regras no `ConviteService`, com o `AcessoACampanha` para mestre e membro; o card é montado por `CardDoConvite`.
 
 Nos testes, `ConvitesDeTeste` cria um mestre com amigos (`CriarMestreComAmigosAsync`), grava convites direto no banco com status e data controláveis (`ConvidarNoBancoAsync`) e chama os endpoints (`ConvidarAsync`, `AceitarAsync`, `RecusarAsync`, `CancelarAsync`).
