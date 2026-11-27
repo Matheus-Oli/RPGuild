@@ -86,6 +86,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<NotificationHub>(NotificationHub.Rota);
+app.MapHub<CampaignHub>(CampaignHub.Rota);
 app.MapHealthChecks("/health");
 
 if (hangfireHabilitado)
