@@ -411,14 +411,16 @@ As listas de amigos e de pedidos não são paginadas.
 ```
 GET /systems → [{slug, nome, ativo}]
 GET /campaigns (onde sou mestre ou jogador, na ordem da minha grade) → [card]
-POST /campaigns {nome, descricao, capaPath, bannerPath, sistema, convidados\[\]} → detalhe
+POST /campaigns {nome, descricao, capaPath, bannerPath, sistema, convidados\[\]?} → detalhe (convidados: amigos; tudo ou nada)
 PUT /campaigns/order {campaignIds\[\]} (todas as minhas, na ordem da grade)
 GET /campaigns/{id} → detalhe
 PUT /campaigns/{id} {nome, descricao, capaPath, bannerPath} (só o mestre; o sistema não muda) → detalhe
 DELETE /campaigns/{id} {confirmacaoNome, confirmacaoFrase} (só o mestre)
 GET /campaigns/{id}/members → [membro]
-POST /campaigns/{id}/invites {userIds\[\]} (só amigos)
-GET /campaign-invites/{id} (card; flag podeResponder)
+POST /campaigns/{id}/invites {userIds\[\]} (só amigos; só o mestre) → [{id, convidado, criadoEm}]
+GET /campaigns/{id}/invites (pendentes; só o mestre) → [{id, convidado: {userId, nome, nick, avatarUrl}, criadoEm}]
+GET /campaign-invites (meus pendentes) → [{id, campanha: {id, nome, sistema, capaUrl}, mestre, criadoEm}]
+GET /campaign-invites/{id} (card; exige login; flag podeResponder)
 POST /campaign-invites/{id}/accept
 POST /campaign-invites/{id}/decline
 DELETE /campaign-invites/{id} (mestre cancela)
@@ -429,6 +431,8 @@ Quem não é mestre nem jogador da campanha recebe 404; jogador numa ação de m
 - **Card:** `{id, nome, sistema: {slug, nome}, papel: "mestre"|"jogador", capaUrl, mestre: {userId, nome, nick, avatarUrl}, jogadores: [{userId, nome, nick, avatarUrl}], proximaSessao}`.
 - **Detalhe:** os campos do card, mais `descricao`, `bannerUrl`, `criadaEm`, `estatisticas: {sessoesJogadas, horasDeMesa, documentos}`, `ondeParamos` e `atividadeRecente: []`.
 - **Membro:** `{userId, nome, nick, avatarUrl, papel, entrouEm, ficha}`. O mestre vem primeiro, com `entrouEm` = criação da campanha; `ficha` traz classe, nível e PV.
+- **Card do convite:** para o convidado e o mestre, `{id, status, podeResponder, campanha: {id, nome, descricao, sistema, capaUrl, bannerUrl}, mestre, naMesa: [mestre + jogadores], convidadoPor: {nome, nick}, para: {nick}, criadoEm}`; para qualquer outro usuário logado, só `{id, podeResponder: false, para: {nick}}`. `podeResponder` = é o convidado e o convite está pendente.
+- **Convites recusados:** 400 (não amigo, o próprio mestre) ou 409 (já jogador, já pendente), com `convidados: [{userId, motivo}]` no ProblemDetails; 400 vence quando há os dois.
 - `proximaSessao`, `estatisticas`, `ondeParamos`, `atividadeRecente` e `ficha` são preenchidos pelos módulos de Sessões, Documentos e Fichas; até lá vêm vazios (null, zeros ou lista vazia).
 
 **Saída de player**

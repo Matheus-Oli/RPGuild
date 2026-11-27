@@ -260,7 +260,7 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 
 **Listas**
 
-- `GET /api/friends`: as amizades mais recentes primeiro (`amigosDesde` = `responded_at` do aceite, decrescente). `campanhasEmComum` vale sempre 0 por enquanto (`TODO(campanhas)` no `AmizadeService`).
+- `GET /api/friends`: as amizades mais recentes primeiro (`amigosDesde` = `responded_at` do aceite, decrescente). `campanhasEmComum` conta as campanhas em que os dois participam, como mestre ou jogador (convite pendente não conta). Vem de Campanhas pela porta `ICampanhasEmComum`.
 - `GET /api/friends/requests`: só os pendentes, os mais novos primeiro, separados em recebidos e enviados.
 - **Nenhuma das duas listas é paginada.**
 - Nenhuma resposta da Taberna tem e-mail. Mesmo num pedido feito por e-mail, o enviado mostra o @nick.
@@ -275,7 +275,7 @@ Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
 | Endpoint | Entrada | Saída |
 | --- | --- | --- |
 | `GET /api/systems` | — | 200 `[{slug, nome, ativo}]` |
-| `POST /api/campaigns` | `{nome, descricao?, sistema, capaPath?, bannerPath?}` | 201 detalhe · 400 |
+| `POST /api/campaigns` | `{nome, descricao?, sistema, capaPath?, bannerPath?, convidados?}` | 201 detalhe · 400 · 409 |
 | `GET /api/campaigns` | — | 200 `[card]`, na ordem da grade do usuário |
 | `PUT /api/campaigns/order` | `{campaignIds[]}` | 204 · 400 |
 | `GET /api/campaigns/{id}` | — | 200 detalhe · 404 |
@@ -338,13 +338,50 @@ Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
 2. Apaga a campanha e tudo dela: os jogadores (`campaign_members`) e as posições nas grades (`campaign_user_order`), pelo cascade do banco. Capa e banner são apagados do bucket (falha vai para o log e a requisição segue com 204).
 3. Os jogadores (lidos **antes** de apagar) recebem o aviso nº 18 `campanha_excluida` no sininho e por e-mail, com `{campanhaNome, mestreNome}`.
 
+**Convites**
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `POST /api/campaigns` | `convidados?: [userId]` junto com o resto | 201 detalhe · 400 (nada é criado) |
+| `POST /api/campaigns/{id}/invites` | `{userIds[]}` | 201 `[{id, convidado, criadoEm}]` · 400 · 403 · 404 · 409 |
+| `GET /api/campaigns/{id}/invites` | — | 200 `[{id, convidado: {userId, nome, nick, avatarUrl}, criadoEm}]` · 403 · 404 |
+| `GET /api/campaign-invites` | — | 200 `[{id, campanha: {id, nome, sistema: {slug, nome}, capaUrl}, mestre: {...}, criadoEm}]` |
+| `GET /api/campaign-invites/{id}` | — | 200 card · 404 |
+| `POST /api/campaign-invites/{id}/accept` | — | 204 · 404 · 409 |
+| `POST /api/campaign-invites/{id}/decline` | — | 204 · 404 · 409 |
+| `DELETE /api/campaign-invites/{id}` | — | 204 · 403 · 404 · 409 |
+
+1. **Quem pode ser convidado:** só amigos do mestre (amizade aceita na Taberna). Cada usuário da lista é conferido e recebe um motivo:
+   - `nao_amigo` e `mestre` (o próprio mestre) dão **400**;
+   - `ja_jogador` e `ja_convidado` (já tem pendente) dão **409**;
+   - com motivos dos dois grupos juntos, **400 vence**.
+   - O ProblemDetails traz todos os recusados na extensão `convidados: [{userId, motivo}]`.
+2. **Tudo ou nada:** com qualquer recusado, ninguém é convidado. Na criação, nem a campanha é criada. Lista vazia (no `/invites`) ou com usuário repetido dá 400 pela validação.
+3. **Na criação**, campanha, posição na grade e convites são gravados na mesma transação (`ITransacao`), e os avisos nº 9 só saem depois.
+4. **Um pendente por (campanha, usuário):** índice único parcial `ix_campaign_invites_pendente` (`status = 'pendente'`). Recusado ou cancelado vira histórico, e o mestre pode convidar de novo na hora (um convite novo).
+5. **Listas:** só pendentes, os mais novos primeiro. A da campanha é só do mestre (jogador 403, quem não participa 404); ela alimenta o "Convite enviado" do modal, e o "Já na mesa" vem de `/members`.
+6. **Card** (`GET /api/campaign-invites/{id}`, exige login; sem token dá 401 e o front mostra "Entre para responder"):
+   - **Convidado e mestre:** `{id, status, podeResponder, campanha: {id, nome, descricao, sistema, capaUrl, bannerUrl}, mestre: {userId, nome, nick, avatarUrl}, naMesa: [mestre + jogadores], convidadoPor: {nome, nick}, para: {nick}, criadoEm}`.
+   - **Qualquer outro usuário logado** (inclusive um jogador da campanha): só `{id, podeResponder: false, para: {nick}}`, sem nenhum dado da campanha ("Este convite é para outra pessoa").
+   - `podeResponder` é true só para o convidado com o convite pendente. `status`: `pendente`, `aceito`, `recusado` ou `cancelado`. Id inexistente dá 404.
+7. **Aceitar e recusar:** só o convidado (para qualquer outro, o convite "não existe": 404) e só pendente (409).
+   - Aceitar põe o usuário em `campaign_members`, com a campanha **no início** da grade dele, tudo numa transação. O mestre recebe o nº 10, e os **outros** jogadores, o nº 13 (nem quem entrou, nem o mestre).
+   - Recusar só muda o status; o mestre recebe o nº 11.
+8. **Cancelar:** só o mestre. O convidado e os jogadores recebem 403; quem não participa, 404; não pendente, 409. O convidado recebe o nº 12.
+9. **Amizade desfeita** (`DELETE /api/friends/{userId}`, de qualquer lado): os convites pendentes entre os dois (campanhas em que um é mestre e o outro é o convidado, nos dois sentidos) são cancelados na mesma transação da remoção, e cada convidado recebe o nº 12. Convites aceitos não mudam. A Taberna chama Campanhas pela porta `IConvitesEntreAmigos`.
+10. **Campanha excluída:** quem tinha convite pendente recebe o nº 12 (lido antes de apagar; os convites vão junto pelo cascade). Os jogadores continuam recebendo o nº 18.
+
+Modelo: `campaign_invites` (`id`, `campaign_id` com cascade, `invited_by`, `user_id`, `status`, `created_at`, `responded_at`), migration `AddConvitesDeCampanha`. Regras no `ConviteService`, com o `AcessoACampanha` para mestre e membro; o card é montado por `CardDoConvite`.
+
+Nos testes, `ConvitesDeTeste` cria um mestre com amigos (`CriarMestreComAmigosAsync`), grava convites direto no banco com status e data controláveis (`ConvidarNoBancoAsync`) e chama os endpoints (`ConvidarAsync`, `AceitarAsync`, `RecusarAsync`, `CancelarAsync`).
+
 Nos testes, `CampanhasDeTeste` cria campanhas pela API (`CriarCampanhaAsync`, `CriarUsuarioComCampanhasAsync`), põe um jogador direto no banco com a campanha no início da grade dele (`AdicionarJogadorAsync`, como o aceite do convite vai fazer) e lê a grade e as linhas da campanha no banco (`OrdemNoBancoAsync`, `LinhasDaCampanhaAsync`).
 
 ## Notificações
 
 Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso, emailDestino?)`), decide os canais de cada tipo, grava o sininho e manda o e-mail. Contas, Taberna e Campanhas só chamam esse serviço; ninguém mais manda e-mail direto.
 
-- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)`, `AmizadeRecusada(...)`, `CampanhaEditada(...)` e `CampanhaExcluida(...)`.
+- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)`, `AmizadeRecusada(...)`, `ConviteRecebido(...)`, `ConviteAceito(...)`, `ConviteRecusado(...)`, `ConviteCancelado(...)`, `JogadorEntrou(...)`, `CampanhaEditada(...)` e `CampanhaExcluida(...)`.
 - O `emailDestino` é para quando o e-mail não vai para o endereço atual do usuário: o antigo no nº 4 e o novo na confirmação.
 
 **Matriz** (`MatrizDeNotificacoes`, o único lugar com os canais):
@@ -359,6 +396,11 @@ Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso
 | `amizade_recebida` | 5 | sim | fila | destinatário do pedido | `{pedidoId, deUserId, deNome, deNick}` |
 | `amizade_aceita` | 6 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
 | `amizade_recusada` | 7 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
+| `convite_recebido` | 9 | sim | fila | o convidado | `{conviteId, campanhaId, campanhaNome, mestreNome, mestreNick}` |
+| `convite_aceito` | 10 | sim | — | o mestre | `{conviteId, campanhaId, campanhaNome, userId, nome, nick}` |
+| `convite_recusado` | 11 | sim | — | o mestre | `{conviteId, campanhaId, campanhaNome, userId, nome, nick}` |
+| `convite_cancelado` | 12 | sim | — | o convidado (cancelado pelo mestre, amizade desfeita ou campanha excluída) | `{campanhaId, campanhaNome}` |
+| `jogador_entrou` | 13 | sim | fila | os outros jogadores | `{campanhaId, campanhaNome, userId, nome, nick}` |
 | `campanha_editada` | 17 | sim | — | os jogadores (não o mestre) | `{campanhaId, campanhaNome}` |
 | `campanha_excluida` | 18 | sim | fila | os jogadores (não o mestre) | `{campanhaNome, mestreNome}` |
 
@@ -432,7 +474,7 @@ Hangfire (`Hangfire.AspNetCore` + `Hangfire.PostgreSql`) com storage no mesmo Po
 
 ## E-mail
 
-E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem sete: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`), pedido de amizade (no `POST /api/friends/requests`, para o destinatário) e campanha excluída (no `DELETE /api/campaigns/{id}`, para os jogadores).
+E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem nove: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`), pedido de amizade (no `POST /api/friends/requests`, para o destinatário), convite de campanha (com o link `{Front:BaseUrl}/convites/{conviteId}`), jogador que entrou (com o link `{Front:BaseUrl}/campanhas/{campanhaId}`) e campanha excluída (no `DELETE /api/campaigns/{id}`, para os jogadores).
 
 **Senha de app do Gmail**
 
