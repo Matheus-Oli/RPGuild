@@ -123,6 +123,12 @@ public static class CampanhasDeTeste
         return (long)(await comando.ExecuteScalarAsync())!;
     }
 
+    public static async Task<HttpResponseMessage> OrdenarAsync(this RPGuildApiFactory factory, UsuarioLogado logado, IEnumerable<Guid> campaignIds)
+    {
+        using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
+        return await cliente.PutAsJsonAsync($"{Url}/order", new { campaignIds });
+    }
+
     public static async Task<List<CardResponse>> CampanhasDeAsync(this RPGuildApiFactory factory, UsuarioLogado logado)
     {
         using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
