@@ -6,6 +6,10 @@ public interface ICampanhaRepository
 {
     Task AdicionarAsync(Campanha campanha, CancellationToken cancellationToken);
 
+    Task<Campanha?> BuscarPorIdAsync(Guid campanhaId, CancellationToken cancellationToken);
+
+    Task<bool> EhJogadorAsync(Guid campanhaId, Guid userId, CancellationToken cancellationToken);
+
     Task<CampanhaGuardada?> BuscarComPessoasAsync(Guid campanhaId, CancellationToken cancellationToken);
 
     /// <summary>

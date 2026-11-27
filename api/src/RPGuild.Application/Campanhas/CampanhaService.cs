@@ -8,6 +8,7 @@ public sealed class CampanhaService(
     ICampanhaRepository campanhas,
     ISistemasRepository sistemas,
     GradeDeCampanhas grade,
+    AcessoACampanha acessos,
     IStorageService storage,
     TimeProvider relogio)
 {
@@ -41,6 +42,46 @@ public sealed class CampanhaService(
 
     public async Task<IReadOnlyList<CampanhaCardResponse>> ListarAsync(Guid userId, CancellationToken cancellationToken) =>
         [.. (await campanhas.ListarDoUsuarioAsync(userId, cancellationToken)).Select(c => Card(c, userId))];
+
+    public async Task<Resultado<CampanhaDetalheResponse>> DetalheAsync(Guid userId, Guid campanhaId, CancellationToken cancellationToken)
+    {
+        var guardada = await DeMembroAsync(userId, campanhaId, cancellationToken);
+        return guardada.Sucesso ? Detalhe(guardada.Valor!, userId) : guardada.Erro!;
+    }
+
+    /// <summary>
+    /// O mestre primeiro (entrou na criação da campanha), depois os jogadores na ordem em que entraram.
+    /// </summary>
+    public async Task<Resultado<MembroDaCampanhaResponse[]>> MembrosAsync(
+        Guid userId, Guid campanhaId, CancellationToken cancellationToken)
+    {
+        var guardada = await DeMembroAsync(userId, campanhaId, cancellationToken);
+        if (!guardada.Sucesso)
+        {
+            return guardada.Erro!;
+        }
+
+        var (campanha, mestre, jogadores) = (guardada.Valor!.Campanha, guardada.Valor.Mestre, guardada.Valor.Jogadores);
+        MembroDaCampanhaResponse[] membros =
+        [
+            Membro(mestre, PapeisNaCampanha.Mestre, campanha.CreatedAt),
+            .. jogadores.Select(j => Membro(j.Pessoa, PapeisNaCampanha.Jogador, j.EntrouEm)),
+        ];
+        return membros;
+    }
+
+    private async Task<Resultado<CampanhaGuardada>> DeMembroAsync(Guid userId, Guid campanhaId, CancellationToken cancellationToken)
+    {
+        var acesso = await acessos.DeMembroAsync(userId, campanhaId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!;
+        }
+
+        return await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken) is { } guardada
+            ? guardada
+            : ErrosDeCampanha.CampanhaNaoEncontrada;
+    }
 
     // Mesma regra do avatar: só vale imagem que o próprio usuário subiu (campaigns/{userId}/...).
     private static bool ImagensDoUsuario(Guid userId, params string?[] paths) =>
@@ -84,6 +125,10 @@ public sealed class CampanhaService(
             // TODO(sessoes, documentos): só o que é público.
             AtividadeRecente: []);
     }
+
+    private MembroDaCampanhaResponse Membro(PessoaGuardada pessoa, string papel, DateTimeOffset entrouEm) =>
+        // TODO(fichas): classe, nível e PV da ficha do jogador.
+        new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath), papel, entrouEm, Ficha: null);
 
     private PessoaDaCampanhaResponse Pessoa(PessoaGuardada pessoa) => new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath));
 

@@ -24,6 +24,24 @@ public sealed class CampaignsController(CampanhaService campanhas, GradeDeCampan
         return this.ParaResposta(resultado, detalhe => Created($"/api/campaigns/{detalhe.Id}", detalhe));
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<CampanhaDetalheResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Detalhe(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await campanhas.DetalheAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, detalhe => Ok(detalhe));
+    }
+
+    [HttpGet("{id:guid}/members")]
+    [ProducesResponseType<IReadOnlyList<MembroDaCampanhaResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Membros(Guid id, CancellationToken cancellationToken)
+    {
+        var resultado = await campanhas.MembrosAsync(User.Id(), id, cancellationToken);
+        return this.ParaResposta(resultado, membros => Ok(membros));
+    }
+
     [HttpPut("order")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]

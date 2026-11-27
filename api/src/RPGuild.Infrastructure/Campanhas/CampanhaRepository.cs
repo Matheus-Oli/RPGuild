@@ -10,6 +10,12 @@ public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository
     public async Task AdicionarAsync(Campanha campanha, CancellationToken cancellationToken) =>
         await db.Campanhas.AddAsync(campanha, cancellationToken);
 
+    public Task<Campanha?> BuscarPorIdAsync(Guid campanhaId, CancellationToken cancellationToken) =>
+        db.Campanhas.SingleOrDefaultAsync(c => c.Id == campanhaId, cancellationToken);
+
+    public Task<bool> EhJogadorAsync(Guid campanhaId, Guid userId, CancellationToken cancellationToken) =>
+        db.MembrosDeCampanha.AnyAsync(m => m.CampaignId == campanhaId && m.UserId == userId, cancellationToken);
+
     public async Task<CampanhaGuardada?> BuscarComPessoasAsync(Guid campanhaId, CancellationToken cancellationToken)
     {
         var campanha = await (
