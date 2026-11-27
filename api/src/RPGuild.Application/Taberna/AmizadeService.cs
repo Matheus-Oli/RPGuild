@@ -12,6 +12,7 @@ public sealed class AmizadeService(
     IStorageService storage,
     INotificador notificador,
     IConvitesEntreAmigos convites,
+    ICampanhasEmComum campanhasEmComum,
     ITransacao transacao,
     TimeProvider relogio)
 {
@@ -75,16 +76,14 @@ public sealed class AmizadeService(
     public async Task<IReadOnlyList<AmigoResponse>> ListarAmigosAsync(Guid userId, CancellationToken cancellationToken)
     {
         var amigos = await amizades.ListarAmigosAsync(userId, cancellationToken);
+        var emComum = await campanhasEmComum.ContarAsync(userId, [.. amigos.Select(a => a.Amigo.Id)], cancellationToken);
         return
         [
             .. amigos.Select(a =>
             {
                 var amigo = Usuario(a.Amigo);
-
-                // TODO(campanhas): calcular campanhas em comum
-                const int campanhasEmComum = 0;
-
-                return new AmigoResponse(amigo.UserId, amigo.Nome, amigo.Nick, amigo.AvatarUrl, campanhasEmComum, a.AmigosDesde);
+                return new AmigoResponse(
+                    amigo.UserId, amigo.Nome, amigo.Nick, amigo.AvatarUrl, emComum.GetValueOrDefault(amigo.UserId), a.AmigosDesde);
             }),
         ];
     }

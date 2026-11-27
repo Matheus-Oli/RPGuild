@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using RPGuild.Application.Campanhas;
+using RPGuild.Application.Taberna;
 using RPGuild.Domain.Campanhas;
 using RPGuild.Infrastructure.Persistence;
 
 namespace RPGuild.Infrastructure.Campanhas;
 
-public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository
+public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository, ICampanhasEmComum
 {
     public async Task AdicionarAsync(Campanha campanha, CancellationToken cancellationToken) =>
         await db.Campanhas.AddAsync(campanha, cancellationToken);
@@ -58,6 +59,21 @@ public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository
             .. campanhas.Select(c =>
                 new CampanhaGuardada(c.Campanha, c.Sistema, c.Mestre, jogadores.GetValueOrDefault(c.Campanha.Id, []))),
         ];
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, int>> ContarAsync(
+        Guid userId, IReadOnlyCollection<Guid> amigos, CancellationToken cancellationToken)
+    {
+        // Quem participa de cada campanha: o mestre e os jogadores.
+        var participacoes = db.Campanhas.Select(c => new { CampanhaId = c.Id, UserId = c.OwnerId })
+            .Concat(db.MembrosDeCampanha.Select(m => new { CampanhaId = m.CampaignId, m.UserId }));
+        var minhas = participacoes.Where(p => p.UserId == userId).Select(p => p.CampanhaId);
+
+        return await participacoes
+            .Where(p => amigos.Contains(p.UserId) && minhas.Contains(p.CampanhaId))
+            .GroupBy(p => p.UserId)
+            .Select(g => new { UserId = g.Key, Total = g.Count() })
+            .ToDictionaryAsync(g => g.UserId, g => g.Total, cancellationToken);
     }
 
     public void Remover(Campanha campanha) => db.Campanhas.Remove(campanha);

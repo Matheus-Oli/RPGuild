@@ -87,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<INotificacaoRepository, NotificacaoRepository>();
         services.AddScoped<ISistemasRepository, SistemasRepository>();
         services.AddScoped<ICampanhaRepository, CampanhaRepository>();
+        services.AddScoped<ICampanhasEmComum, CampanhaRepository>();
         services.AddScoped<IGradeDeCampanhasRepository, GradeDeCampanhasRepository>();
         services.AddScoped<IConviteRepository, ConviteRepository>();
 

@@ -36,6 +36,7 @@ public class AmizadeServiceTests
             Substitute.For<IStorageService>(),
             Substitute.For<INotificador>(),
             Substitute.For<IConvitesEntreAmigos>(),
+            Substitute.For<ICampanhasEmComum>(),
             new TransacaoFalsa(),
             _relogio);
     }
