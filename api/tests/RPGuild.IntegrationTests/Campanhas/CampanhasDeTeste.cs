@@ -144,6 +144,38 @@ public static class CampanhasDeTeste
     /// </summary>
     public static string NovaImagemDeCampanha(this UsuarioLogado logado) => $"campaigns/{logado.Id}/{Guid.NewGuid()}.png";
 
+    public static async Task<HttpResponseMessage> ExcluirAsync(
+        this RPGuildApiFactory factory, UsuarioLogado logado, Guid campanhaId, string? confirmacaoNome, string? confirmacaoFrase)
+    {
+        using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);
+        using var requisicao = new HttpRequestMessage(HttpMethod.Delete, Campanha(campanhaId))
+        {
+            Content = JsonContent.Create(new { confirmacaoNome, confirmacaoFrase }),
+        };
+        return await cliente.SendAsync(requisicao);
+    }
+
+    /// <summary>
+    /// Quantas linhas a campanha tem no banco: ela mesma, os jogadores e as posições nas grades.
+    /// </summary>
+    public static async Task<(long Campanhas, long Membros, long Posicoes)> LinhasDaCampanhaAsync(
+        this RPGuildApiFactory factory, Guid campanhaId)
+    {
+        await using var conexao = new NpgsqlConnection(factory.ConnectionString);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand(
+            """
+            SELECT (SELECT count(*) FROM campaigns WHERE id = @campanha),
+                   (SELECT count(*) FROM campaign_members WHERE campaign_id = @campanha),
+                   (SELECT count(*) FROM campaign_user_order WHERE campaign_id = @campanha)
+            """,
+            conexao);
+        comando.Parameters.AddWithValue("campanha", campanhaId);
+        await using var leitor = await comando.ExecuteReaderAsync();
+        await leitor.ReadAsync();
+        return (leitor.GetInt64(0), leitor.GetInt64(1), leitor.GetInt64(2));
+    }
+
     public static async Task<HttpResponseMessage> OrdenarAsync(this RPGuildApiFactory factory, UsuarioLogado logado, IEnumerable<Guid> campaignIds)
     {
         using var cliente = factory.CriarClienteAutenticado(logado.AccessToken);

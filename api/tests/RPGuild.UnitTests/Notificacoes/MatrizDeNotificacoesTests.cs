@@ -14,6 +14,7 @@ public class MatrizDeNotificacoesTests
     [InlineData(TiposDeNotificacao.AmizadeAceita, true, EnvioPorEmail.Nenhum)]
     [InlineData(TiposDeNotificacao.AmizadeRecusada, true, EnvioPorEmail.Nenhum)]
     [InlineData(TiposDeNotificacao.CampanhaEditada, true, EnvioPorEmail.Nenhum)]
+    [InlineData(TiposDeNotificacao.CampanhaExcluida, true, EnvioPorEmail.Fila)]
     public void CanaisDe_TipoConhecido_TemOsCanaisDaMatriz(string tipo, bool sininho, EnvioPorEmail email)
     {
         // Act
@@ -36,6 +37,7 @@ public class MatrizDeNotificacoesTests
         TiposDeNotificacao.AmizadeAceita.ShouldBe("amizade_aceita");
         TiposDeNotificacao.AmizadeRecusada.ShouldBe("amizade_recusada");
         TiposDeNotificacao.CampanhaEditada.ShouldBe("campanha_editada");
+        TiposDeNotificacao.CampanhaExcluida.ShouldBe("campanha_excluida");
     }
 
     [Theory]

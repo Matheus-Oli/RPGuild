@@ -107,4 +107,17 @@ public class EmailTemplatesTests
         mensagem.Texto.ShouldContain("Muirenn Folha-Alta (@muirenn)");
         mensagem.Texto.ShouldContain(link);
     }
+
+    [Fact]
+    public void CampanhaExcluida_Mestre_TemONomeDaCampanhaEQuemExcluiu()
+    {
+        // Act
+        var mensagem = EmailTemplates.CampanhaExcluida(Nome, Email, "A Mina Perdida", "Muirenn Folha-Alta");
+
+        // Assert
+        mensagem.Para.ShouldBe(Email);
+        mensagem.Assunto.ShouldBe("A campanha A Mina Perdida foi excluída");
+        mensagem.Texto.ShouldContain(Nome);
+        mensagem.Texto.ShouldContain("Muirenn Folha-Alta excluiu a campanha A Mina Perdida");
+    }
 }
