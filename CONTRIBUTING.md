@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | `main` | Produção. Cada merge aqui é um deploy. | — | — |
 | `develop` | Integração do que está pronto para a próxima versão. | `main` | `main` (via release) |
-| `feature/<card>-<descricao>` | Uma funcionalidade ou card do Trello. | `develop` | `develop` |
+| `feature/<descricao>` | Uma funcionalidade. | `develop` | `develop` |
 | `release/<versao>` | Ajustes finais antes de publicar. | `develop` | `main` e `develop` |
 | `hotfix/<descricao>` | Correção urgente em produção. | `main` | `main` e `develop` |
 
@@ -25,10 +25,9 @@ Exemplos: `feature/s1-auth-jwt`, `feature/s5-criacao-ficha`, `release/1.0.0`, `h
 ## Pull requests
 
 - Todo código entra por PR, nunca direto em `main` ou `develop`.
-- Título no padrão dos commits; descrição pelo template, com o link do card do Trello.
+- Título no padrão dos commits; descrição pelo template.
 - O PR só entra com o CI verde (build e testes).
 - Prefira squash merge em `feature/*` → `develop`, e merge commit em `release/*` e `hotfix/*`.
-- Ao fazer merge, mova o card no Trello para **Feito**.
 
 ## Versionamento
 

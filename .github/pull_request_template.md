@@ -2,10 +2,6 @@
 
 <!-- Resumo em 1 a 3 linhas -->
 
-## Card do Trello
-
-<!-- Link do card -->
-
 ## Como testar
 
 1.

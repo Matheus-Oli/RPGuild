@@ -11,7 +11,7 @@ Atualizado em 27/11/2026. Este arquivo complementa o "Documento do projeto": ond
 | Protótipo (Fase 1, pronto) | Claude Design: https://claude.ai/artifact/8fy5sfDaAmNEEhSwbnGLqk |
 | Repositório | https://github.com/Matheus-Oli/RPGuild (monorepo; docs em `docs/`, inclusive `docs/estado-atual.md`) |
 | Pasta local | Monorepo em `C:\Users\Usuario\Downloads\Projetos\RPGuild` (a pasta `Projetos\RPG` é o repositório antigo, só de documentos) |
-| Backlog | Trello, quadro RPGuild: https://trello.com/b/qBRH7HXp/rpguild (desatualizado; não é usado no acompanhamento da Fase 2) |
+| Backlog | Trello, quadro RPGuild: https://trello.com/b/qBRH7HXp/rpguild (desatualizado; não é usado no acompanhamento da Fase 2, e o fluxo de PR não depende dele) |
 
 ## Mudança de plano: ordem de execução
 
@@ -45,7 +45,7 @@ O backlog antigo (S0 a S10, fatiado por camada) foi descartado. A nova ordem é:
 - Uma branch `feature/<modulo>` e um PR para `develop` por módulo, aberto só quando o módulo fecha.
 - Prompts para o Claude Code montados no projeto RPGuild do Claude; decisões técnicas são perguntadas ao Matheus antes.
 - Antes de cada módulo, as telas do protótipo daquele módulo são conferidas contra os endpoints.
-- **Campos que dependem de outros módulos** (ex.: campanhas em comum, próxima sessão, classe/nível/PV dos jogadores): entram já no módulo atual, vazios (null ou 0) e com `TODO`, e passam a ser calculados no módulo dono do dado.
+- **Campos que dependem de outros módulos** (ex.: campanhas em comum, próxima sessão, classe/nível/PV dos jogadores): entram já no módulo atual, vazios (null, 0 ou lista vazia) e com `TODO`, e passam a ser calculados no módulo dono do dado.
 - Os detalhes de cada módulo (regras, endpoints, eventos, configuração) ficam no `api/README.md` do repositório.
 
 ## Nova feature v1: visão geral da campanha — "Onde paramos" e "Atividade recente" (26/11/2026)
@@ -76,7 +76,7 @@ Não está no protótipo; entra na v1 por decisão do Matheus.
 
 - **Paleta papiro/papel antigo** (substitui o tema escuro "taverna" e o "carvão neutro"): ver "Identidade visual" abaixo.
 - **Home:** o hero usa um GIF de paisagem de fantasia (campina com ruínas).
-- **Música de fundo em todo o site** (não só na Home): trilha medieval "A Quiet Night – Medieval Village", tocada por um botão de som no menu. O arquivo de áudio ainda precisa subir para o Supabase Storage.
+- **Música de fundo em todo o site** (não só na Home): trilha medieval "A Quiet Night – Medieval Village", tocada por um botão de som no menu. O arquivo de áudio fica **no front** (`/web/public`), servido pelo Cloudflare Pages junto com o site (não vai para o Supabase).
 - **Agenda:** só a visualização **mensal**, no estilo do mês do Google Calendar.
 - **Regras para todas as telas:**
   - Bordas arredondadas (nada de canto reto).
