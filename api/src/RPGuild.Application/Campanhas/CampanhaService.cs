@@ -1,0 +1,88 @@
+using RPGuild.Application.Comum;
+using RPGuild.Application.Uploads;
+using RPGuild.Domain.Campanhas;
+
+namespace RPGuild.Application.Campanhas;
+
+public sealed class CampanhaService(
+    ICampanhaRepository campanhas,
+    ISistemasRepository sistemas,
+    GradeDeCampanhas grade,
+    IStorageService storage,
+    TimeProvider relogio)
+{
+    /// <summary>
+    /// Quem cria é o mestre, e a campanha entra no início da grade dele. O request já chega validado.
+    /// </summary>
+    public async Task<Resultado<CampanhaDetalheResponse>> CriarAsync(
+        Guid userId, CriarCampanhaRequest request, CancellationToken cancellationToken)
+    {
+        var sistema = await sistemas.BuscarPorSlugAsync(request.Sistema, cancellationToken);
+        if (sistema is not { Ativo: true })
+        {
+            return ErrosDeCampanha.SistemaIndisponivel;
+        }
+
+        if (!ImagensDoUsuario(userId, request.CapaPath, request.BannerPath))
+        {
+            return ErrosDeCampanha.ImagemForaDaPasta;
+        }
+
+        var campanha = Campanha.Criar(
+            userId, sistema.Id, request.Nome.Trim(), request.Descricao, request.CapaPath, request.BannerPath, relogio.GetUtcNow());
+        await campanhas.AdicionarAsync(campanha, cancellationToken);
+        await campanhas.SalvarAlteracoesAsync(cancellationToken);
+        await grade.ColocarNoInicioAsync(userId, campanha.Id, cancellationToken);
+
+        var criada = await campanhas.BuscarComPessoasAsync(campanha.Id, cancellationToken)
+            ?? throw new InvalidOperationException($"A campanha {campanha.Id} sumiu logo depois de criada.");
+        return Detalhe(criada, userId);
+    }
+
+    // Mesma regra do avatar: só vale imagem que o próprio usuário subiu (campaigns/{userId}/...).
+    private static bool ImagensDoUsuario(Guid userId, params string?[] paths) =>
+        paths.All(path => path is null || CaminhoDeImagemDeCampanha.PertenceAo(userId, path));
+
+    private CampanhaCardResponse Card(CampanhaGuardada guardada, Guid userId)
+    {
+        var campanha = guardada.Campanha;
+        return new CampanhaCardResponse(
+            campanha.Id,
+            campanha.Nome,
+            new SistemaDaCampanhaResponse(guardada.Sistema.Slug, guardada.Sistema.Nome),
+            campanha.OwnerId == userId ? PapeisNaCampanha.Mestre : PapeisNaCampanha.Jogador,
+            Url(campanha.CapaPath),
+            Pessoa(guardada.Mestre),
+            [.. guardada.Jogadores.Select(j => Pessoa(j.Pessoa))],
+            // TODO(sessoes): a próxima sessão agendada.
+            ProximaSessao: null);
+    }
+
+    private CampanhaDetalheResponse Detalhe(CampanhaGuardada guardada, Guid userId)
+    {
+        var card = Card(guardada, userId);
+        var campanha = guardada.Campanha;
+        return new CampanhaDetalheResponse(
+            card.Id,
+            card.Nome,
+            card.Sistema,
+            card.Papel,
+            card.CapaUrl,
+            card.Mestre,
+            card.Jogadores,
+            card.ProximaSessao,
+            campanha.Descricao,
+            Url(campanha.BannerPath),
+            campanha.CreatedAt,
+            // TODO(sessoes, documentos): sessões jogadas, horas de mesa e documentos.
+            new EstatisticasDaCampanhaResponse(SessoesJogadas: 0, HorasDeMesa: 0, Documentos: 0),
+            // TODO(sessoes): o resumo da última sessão jogada.
+            OndeParamos: null,
+            // TODO(sessoes, documentos): só o que é público.
+            AtividadeRecente: []);
+    }
+
+    private PessoaDaCampanhaResponse Pessoa(PessoaGuardada pessoa) => new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath));
+
+    private string? Url(string? path) => path is null ? null : storage.ObterUrlPublica(path);
+}

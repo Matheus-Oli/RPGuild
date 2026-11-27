@@ -85,6 +85,8 @@ public static class DependencyInjection
         services.AddScoped<IAmizadeRepository, AmizadeRepository>();
         services.AddScoped<INotificacaoRepository, NotificacaoRepository>();
         services.AddScoped<ISistemasRepository, SistemasRepository>();
+        services.AddScoped<ICampanhaRepository, CampanhaRepository>();
+        services.AddScoped<IGradeDeCampanhasRepository, GradeDeCampanhasRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);

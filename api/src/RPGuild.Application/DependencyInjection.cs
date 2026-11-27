@@ -17,6 +17,8 @@ public static class DependencyInjection
         services.AddScoped<UploadService>();
         services.AddScoped<AmizadeService>();
         services.AddScoped<SistemasService>();
+        services.AddScoped<GradeDeCampanhas>();
+        services.AddScoped<CampanhaService>();
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<EnvioDeEmail>();
         services.AddScoped<INotificador, Notificador>();
