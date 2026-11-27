@@ -45,6 +45,10 @@ SemVer (`MAJOR.MINOR.PATCH`), com tag em `main` a cada release (`v1.0.0`).
   - `dotnet test api/RPGuild.sln --filter "FullyQualifiedName~<ClasseDeTeste>"`
   - Unitários: `dotnet test api/tests/RPGuild.UnitTests`, que roda sem Docker.
 - A suíte inteira (`dotnet test api/RPGuild.sln`) roda ao fim de cada ciclo e antes do push.
+- Se um teste passar de primeira, valide com mutação: quebre de propósito a regra que ele protege e confira que ele falha.
+  - Antes de mutar, garanta que a implementação do green já está commitada ou em stash.
+  - Desfaça a mutação editando o arquivo de volta à mão, ou com `git stash` / `git stash pop`.
+  - Nunca use `git checkout -- <arquivo>`, `git restore` ou `git reset --hard` com trabalho não commitado: eles apagam a implementação junto com a mutação.
 - O container de testes (`rpguild-tests-db`) é reaproveitado em dev: ele fica rodando entre as execuções, numa porta aleatória, e os dados são limpos (Respawn) ao subir a suíte. Não precisa de flag do Testcontainers. Em CI (`CI=true`) o container é sempre novo e removido no fim. Para recriar: `docker rm -f rpguild-tests-db`.
 
 ## PRs por módulo
