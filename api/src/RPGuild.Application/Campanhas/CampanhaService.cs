@@ -39,6 +39,9 @@ public sealed class CampanhaService(
         return Detalhe(criada, userId);
     }
 
+    public async Task<IReadOnlyList<CampanhaCardResponse>> ListarAsync(Guid userId, CancellationToken cancellationToken) =>
+        [.. (await campanhas.ListarDoUsuarioAsync(userId, cancellationToken)).Select(c => Card(c, userId))];
+
     // Mesma regra do avatar: só vale imagem que o próprio usuário subiu (campaigns/{userId}/...).
     private static bool ImagensDoUsuario(Guid userId, params string?[] paths) =>
         paths.All(path => path is null || CaminhoDeImagemDeCampanha.PertenceAo(userId, path));

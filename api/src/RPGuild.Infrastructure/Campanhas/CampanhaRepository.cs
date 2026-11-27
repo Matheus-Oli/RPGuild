@@ -28,6 +28,28 @@ public sealed class CampanhaRepository(AppDbContext db) : ICampanhaRepository
         return new CampanhaGuardada(campanha.Campanha, campanha.Sistema, campanha.Mestre, jogadores.GetValueOrDefault(campanhaId, []));
     }
 
+    public async Task<IReadOnlyList<CampanhaGuardada>> ListarDoUsuarioAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        // Sem posição na grade (não deveria acontecer), a campanha vai para o início, as mais novas primeiro.
+        var campanhas = await (
+            from c in db.Campanhas.AsNoTracking()
+            where c.OwnerId == userId || db.MembrosDeCampanha.Any(m => m.CampaignId == c.Id && m.UserId == userId)
+            join s in db.SistemasDeJogo on c.SystemId equals s.Id
+            join u in db.Users on c.OwnerId equals u.Id
+            join p in db.OrdemDasCampanhas.Where(p => p.UserId == userId) on c.Id equals p.CampaignId into posicoes
+            from p in posicoes.DefaultIfEmpty()
+            orderby p == null ? -1 : p.Posicao, c.CreatedAt descending
+            select new { Campanha = c, Sistema = s, Mestre = new PessoaGuardada(u.Id, u.Nome, u.Nick, u.AvatarPath) })
+            .ToListAsync(cancellationToken);
+
+        var jogadores = await JogadoresAsync([.. campanhas.Select(c => c.Campanha.Id)], cancellationToken);
+        return
+        [
+            .. campanhas.Select(c =>
+                new CampanhaGuardada(c.Campanha, c.Sistema, c.Mestre, jogadores.GetValueOrDefault(c.Campanha.Id, []))),
+        ];
+    }
+
     public Task SalvarAlteracoesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 
     // Os jogadores de cada campanha, do que entrou primeiro para o último.

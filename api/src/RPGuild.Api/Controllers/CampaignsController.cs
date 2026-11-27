@@ -10,6 +10,11 @@ namespace RPGuild.Api.Controllers;
 [Route("api/campaigns")]
 public sealed class CampaignsController(CampanhaService campanhas) : ControllerBase
 {
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<CampanhaCardResponse>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Listar(CancellationToken cancellationToken) =>
+        Ok(await campanhas.ListarAsync(User.Id(), cancellationToken));
+
     [HttpPost]
     [ProducesResponseType<CampanhaDetalheResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
