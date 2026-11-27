@@ -18,6 +18,7 @@ public class MatrizDeNotificacoesTests
     [InlineData(TiposDeNotificacao.ConviteRecebido, true, EnvioPorEmail.Fila)]
     [InlineData(TiposDeNotificacao.ConviteAceito, true, EnvioPorEmail.Nenhum)]
     [InlineData(TiposDeNotificacao.ConviteRecusado, true, EnvioPorEmail.Nenhum)]
+    [InlineData(TiposDeNotificacao.ConviteCancelado, true, EnvioPorEmail.Nenhum)]
     [InlineData(TiposDeNotificacao.JogadorEntrou, true, EnvioPorEmail.Fila)]
     public void CanaisDe_TipoConhecido_TemOsCanaisDaMatriz(string tipo, bool sininho, EnvioPorEmail email)
     {
@@ -45,6 +46,7 @@ public class MatrizDeNotificacoesTests
         TiposDeNotificacao.ConviteRecebido.ShouldBe("convite_recebido");
         TiposDeNotificacao.ConviteAceito.ShouldBe("convite_aceito");
         TiposDeNotificacao.ConviteRecusado.ShouldBe("convite_recusado");
+        TiposDeNotificacao.ConviteCancelado.ShouldBe("convite_cancelado");
         TiposDeNotificacao.JogadorEntrou.ShouldBe("jogador_entrou");
     }
 
