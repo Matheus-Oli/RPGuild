@@ -5,6 +5,7 @@ using RPGuild.Api.Configuracao;
 using RPGuild.Api.Http;
 using RPGuild.Api.TempoReal;
 using RPGuild.Application;
+using RPGuild.Application.Campanhas;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Infrastructure;
 using RPGuild.Infrastructure.Notificacoes;
@@ -34,6 +35,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, UsuarioPeloSub>();
 builder.Services.AddSingleton<INotificacoesTempoReal, HubNotificacoesTempoReal>();
+builder.Services.AddSingleton<ICampanhaTempoReal, HubCampanhaTempoReal>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -86,6 +88,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<NotificationHub>(NotificationHub.Rota);
+app.MapHub<CampaignHub>(CampaignHub.Rota);
 app.MapHealthChecks("/health");
 
 if (hangfireHabilitado)

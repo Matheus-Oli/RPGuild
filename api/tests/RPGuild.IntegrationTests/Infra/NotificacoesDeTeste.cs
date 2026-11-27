@@ -41,6 +41,13 @@ public static class NotificacoesDeTeste
     }
 
     /// <summary>
+    /// Quantos e-mails o usuário recebeu até agora, pela fila ou direto.
+    /// </summary>
+    public static int EmailsPara(this RPGuildApiFactory factory, UsuarioLogado usuario) =>
+        factory.Fila.Enfileiradas.Count(m => m.Para == usuario.Dados.Email)
+        + factory.Emails.Enviadas.Count(m => m.Para == usuario.Dados.Email);
+
+    /// <summary>
     /// As notificações do usuário como estão no banco, das mais novas para as mais antigas.
     /// </summary>
     public static async Task<List<NotificacaoNoBanco>> NotificacoesNoBancoAsync(this RPGuildApiFactory factory, Guid userId)

@@ -191,11 +191,13 @@ Imagens ficam no Supabase Storage, no bucket público `imagens`. A API não rece
 
 **Fluxo**
 
-1. O front chama `POST /api/uploads/sign` com o `tipo` e o `contentType` do arquivo. Por enquanto só `tipo = "avatar"`; capa, banner e retrato respondem 400 ("ainda não suportado").
-2. `contentType` permitido: `image/jpeg`, `image/png`, `image/webp`, `image/gif`. A API escolhe o path, `avatars/{userId}/{guid}.{ext}`, com a extensão vinda do `contentType` (`jpg`, `png`, `webp`, `gif`).
+1. O front chama `POST /api/uploads/sign` com o `tipo` e o `contentType` do arquivo. Tipos: `avatar`, `capa` e `banner` (os dois últimos da [campanha](#campanhas)); retrato responde 400 ("ainda não suportado").
+2. `contentType` permitido (o mesmo para os três tipos): `image/jpeg`, `image/png`, `image/webp`, `image/gif`. A API escolhe o path, com a extensão vinda do `contentType` (`jpg`, `png`, `webp`, `gif`):
+   - avatar: `avatars/{userId}/{guid}.{ext}`;
+   - capa e banner: `campaigns/{userId}/{guid}.{ext}`. A pasta é de quem sobe, porque a campanha ainda não existe na hora do upload.
 3. A resposta traz a `uploadUrl` (assinada, com `?token=`; o Supabase a deixa valer por 2 horas), o `path` e a `publicUrl`.
 4. O front sobe o arquivo com `PUT` na `uploadUrl`, corpo binário e `Content-Type` do arquivo. Não precisa de chave nem de Bearer: o token da URL autoriza só aquele path.
-5. Com o upload feito, o front manda o `path` em `PUT /api/me` (`avatarPath`). O avatar antigo é apagado do bucket nessa hora.
+5. Com o upload feito, o front manda o `path` em `PUT /api/me` (`avatarPath`) ou no `POST`/`PUT` da campanha (`capaPath`, `bannerPath`). A imagem antiga é apagada do bucket nessa hora.
 
 **Limites:** 5 MB por arquivo e os mesmos tipos de imagem, configurados **no bucket** do Supabase. Como a API não vê o arquivo, quem barra o tamanho é o Storage.
 
@@ -258,7 +260,7 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 
 **Listas**
 
-- `GET /api/friends`: as amizades mais recentes primeiro (`amigosDesde` = `responded_at` do aceite, decrescente). `campanhasEmComum` vale sempre 0 por enquanto (`TODO(campanhas)` no `AmizadeService`).
+- `GET /api/friends`: as amizades mais recentes primeiro (`amigosDesde` = `responded_at` do aceite, decrescente). `campanhasEmComum` conta as campanhas em que os dois participam, como mestre ou jogador (convite pendente não conta). Vem de Campanhas pela porta `ICampanhasEmComum`.
 - `GET /api/friends/requests`: só os pendentes, os mais novos primeiro, separados em recebidos e enviados.
 - **Nenhuma das duas listas é paginada.**
 - Nenhuma resposta da Taberna tem e-mail. Mesmo num pedido feito por e-mail, o enviado mostra o @nick.
@@ -266,11 +268,124 @@ Amizades entre usuários. Todos os endpoints exigem `Authorization: Bearer` (401
 
 Nos testes, `TabernaDeTeste` cria vários usuários logados (`CriarUsuariosLogadosAsync`, `CriarDoisUsuariosLogadosAsync`) e deixa dois amigos direto no banco (`TornarAmigosAsync`, com o "amigos desde" controlável). `ClienteDaTaberna` faz as chamadas e monta as URLs.
 
+## Campanhas
+
+Todos os endpoints exigem `Authorization: Bearer` (401 sem token).
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `GET /api/systems` | — | 200 `[{slug, nome, ativo}]` |
+| `POST /api/campaigns` | `{nome, descricao?, sistema, capaPath?, bannerPath?, convidados?}` | 201 detalhe · 400 |
+| `GET /api/campaigns` | — | 200 `[card]`, na ordem da grade do usuário |
+| `PUT /api/campaigns/order` | `{campaignIds[]}` | 204 · 400 |
+| `GET /api/campaigns/{id}` | — | 200 detalhe · 404 |
+| `GET /api/campaigns/{id}/members` | — | 200 `[membro]` · 404 |
+| `PUT /api/campaigns/{id}` | `{nome, descricao?, capaPath?, bannerPath?}` | 200 detalhe · 400 · 403 · 404 |
+| `DELETE /api/campaigns/{id}` | `{confirmacaoNome, confirmacaoFrase}` | 204 · 400 · 403 · 404 |
+
+**Formatos** (nenhum tem e-mail)
+
+- **Card:** `{id, nome, sistema: {slug, nome}, papel: "mestre"|"jogador", capaUrl, mestre: {userId, nome, nick, avatarUrl}, jogadores: [{userId, nome, nick, avatarUrl}], proximaSessao}`. `papel` é o de quem pediu; os jogadores vêm na ordem em que entraram.
+- **Detalhe:** os campos do card, mais `descricao`, `bannerUrl`, `criadaEm`, `estatisticas: {sessoesJogadas, horasDeMesa, documentos}`, `ondeParamos` e `atividadeRecente`.
+- **Membro:** `{userId, nome, nick, avatarUrl, papel, entrouEm, ficha}`. O mestre vem primeiro, com `entrouEm` = criação da campanha; depois os jogadores, na ordem em que entraram (`joined_at`).
+- `capaUrl`, `bannerUrl` e `avatarUrl` são as URLs públicas do storage, ou null.
+
+**Campos de outros módulos:** já vêm na resposta, vazios, com `TODO(<modulo>)` no `CampanhaService`:
+
+| Campo | Valor agora | Módulo |
+| --- | --- | --- |
+| `proximaSessao` | `null` | Sessões |
+| `estatisticas` | `{sessoesJogadas: 0, horasDeMesa: 0, documentos: 0}` | Sessões e Documentos |
+| `ondeParamos` | `null` | Sessões |
+| `atividadeRecente` | `[]` | Sessões e Documentos |
+| `ficha` (membro) | `null` | Fichas |
+
+**Regras**
+
+1. Quem cria é o mestre (`owner_id`). Os jogadores ficam em `campaign_members`; o mestre não entra lá. Não há limite de jogadores. Por enquanto ninguém entra como jogador pela API: quem cria a linha é o aceite do convite (parte 2).
+2. Nome obrigatório, até 80 caracteres (sem os espaços das pontas); descrição opcional, até 2000.
+3. `sistema` é o slug de um sistema **ativo** (na v1, só `dnd2024`). Inativo ou inexistente dá 400. **O sistema não muda depois de criada:** o `PUT` nem tem o campo (se vier, é ignorado).
+4. `game_systems` tem o seed na migration `AddCampanhas`: `dnd2024` (ativo), `ordem2`, `t20`, `coc` e `deadlands` (inativos).
+
+**Acesso** (`AcessoACampanha`, reaproveitável pelos próximos módulos)
+
+- `DeMembroAsync`: mestre ou jogador. Quem não participa recebe **404**, como se a campanha não existisse.
+- `DeMestreAsync`: só o mestre. Jogador recebe **403** (`TipoErro.Proibido`); quem não participa, 404.
+- Ler (detalhe e membros) é de membro; editar e excluir são de mestre.
+
+**Grade** (`campaign_user_order`: `user_id`, `campaign_id`, `posicao`, PK composta, cascade nos dois)
+
+1. Cada usuário (mestre ou jogador) tem a sua ordem; a de um não muda a de outro.
+2. Campanha nova entra **no início** da grade de quem cria (e, na parte 2, de quem aceita o convite), e o resto desce uma posição. Por isso quem nunca reordenou vê a mais nova primeiro.
+   - Na criação, a campanha e a posição na grade são gravadas **na mesma transação** (`ITransacao`, implementada por `TransacaoDoBanco`). Se a posição falhar, a campanha não é criada, nada sobra no banco e a resposta é 500 em ProblemDetails.
+   - Como proteção, o `GET /api/campaigns` põe no início uma campanha que esteja sem posição.
+3. `PUT /api/campaigns/order` recebe **exatamente** as campanhas do usuário: sem repetir, sem faltar e sem sobrar (campanha de outra pessoa ou inexistente conta como sobra); senão, 400. As posições são gravadas numa transação (`GradeDeCampanhas`).
+
+**Imagens (capa e banner)**
+
+1. Os paths vêm do [`POST /api/uploads/sign`](#uploads) com `tipo` `capa` ou `banner`.
+2. No `POST` e no `PUT`, o path precisa estar na pasta de campanhas do próprio usuário (`campaigns/{userId}/...`, mesma regra do avatar: sem `..`, `.`, `\` ou segmentos vazios); senão, 400. `null` deixa a campanha sem a imagem (no `PUT`, remove).
+3. **Trocar ou remover a capa ou o banner apaga a imagem antiga do bucket**, depois de salvar. Se a exclusão falhar, a falha vai para o log (`Warning`, com o path) e a requisição segue.
+
+**Editar**
+
+- Só o mestre. Responde o detalhe atualizado.
+- Se algo mudou, os jogadores recebem o aviso nº 17 `campanha_editada` (só sininho), com `{campanhaId, campanhaNome}`. O mestre não recebe. Um `PUT` sem mudança nenhuma não avisa ninguém.
+
+**Excluir**
+
+1. Só o mestre, com `confirmacaoNome` igual ao nome da campanha e `confirmacaoFrase` igual a `desejo excluir a campanha`. As duas são **exatas, ignorando só os espaços nas pontas**: maiúsculas e acentos contam (`ConfirmacaoDeExclusao`). Se não bater, 400 e nada é apagado.
+2. Apaga a campanha e tudo dela: os jogadores (`campaign_members`) e as posições nas grades (`campaign_user_order`), pelo cascade do banco. Capa e banner são apagados do bucket (falha vai para o log e a requisição segue com 204).
+3. Os jogadores (lidos **antes** de apagar) recebem o aviso nº 18 `campanha_excluida` no sininho e por e-mail, com `{campanhaNome, mestreNome}`.
+
+**Convites**
+
+| Endpoint | Entrada | Saída |
+| --- | --- | --- |
+| `POST /api/campaigns` | `convidados?: [userId]` junto com o resto | 201 detalhe · 400 (nada é criado) |
+| `POST /api/campaigns/{id}/invites` | `{userIds[]}` | 201 `[{id, convidado, criadoEm}]` · 400 · 403 · 404 · 409 |
+| `GET /api/campaigns/{id}/invites` | — | 200 `[{id, convidado: {userId, nome, nick, avatarUrl}, criadoEm}]` · 403 · 404 |
+| `GET /api/campaign-invites` | — | 200 `[{id, campanha: {id, nome, sistema: {slug, nome}, capaUrl}, mestre: {...}, criadoEm}]` |
+| `GET /api/campaign-invites/{id}` | — | 200 card · 404 |
+| `POST /api/campaign-invites/{id}/accept` | — | 204 · 404 · 409 |
+| `POST /api/campaign-invites/{id}/decline` | — | 204 · 404 · 409 |
+| `DELETE /api/campaign-invites/{id}` | — | 204 · 403 · 404 · 409 |
+
+1. **Quem pode ser convidado:** só amigos do mestre (amizade aceita na Taberna). Cada usuário da lista é conferido e recebe um motivo:
+   - `nao_amigo` e `mestre` (o próprio mestre) dão **400**;
+   - `ja_jogador` e `ja_convidado` (já tem pendente) dão **409**;
+   - com motivos dos dois grupos juntos, **400 vence**.
+   - O ProblemDetails traz todos os recusados na extensão `convidados: [{userId, motivo}]`.
+2. **Tudo ou nada:** com qualquer recusado, ninguém é convidado. Na criação, nem a campanha é criada. Lista vazia (no `/invites`) ou com usuário repetido dá 400 pela validação.
+3. **Na criação**, campanha, posição na grade e convites são gravados na mesma transação (`ITransacao`), e os avisos nº 9 só saem depois.
+4. **Um pendente por (campanha, usuário):** índice único parcial `ix_campaign_invites_pendente` (`status = 'pendente'`). Recusado ou cancelado vira histórico, e o mestre pode convidar de novo na hora (um convite novo).
+5. **Listas:** só pendentes, os mais novos primeiro. A da campanha é só do mestre (jogador 403, quem não participa 404); ela alimenta o "Convite enviado" do modal, e o "Já na mesa" vem de `/members`.
+6. **Card** (`GET /api/campaign-invites/{id}`, exige login; sem token dá 401 e o front mostra "Entre para responder"):
+   - **Convidado e mestre:** `{id, status, podeResponder, campanha: {id, nome, descricao, sistema, capaUrl, bannerUrl}, mestre: {userId, nome, nick, avatarUrl}, naMesa: [mestre + jogadores], convidadoPor: {nome, nick}, para: {nick}, criadoEm}`.
+   - **Qualquer outro usuário logado** (inclusive um jogador da campanha): só `{id, podeResponder: false, para: {nick}}`, sem nenhum dado da campanha ("Este convite é para outra pessoa").
+   - `podeResponder` é true só para o convidado com o convite pendente. `status`: `pendente`, `aceito`, `recusado` ou `cancelado`. Id inexistente dá 404.
+7. **Aceitar e recusar:** só o convidado (para qualquer outro, o convite "não existe": 404) e só pendente (409).
+   - Aceitar põe o usuário em `campaign_members`, com a campanha **no início** da grade dele, tudo numa transação. O mestre recebe o nº 10, e os **outros** jogadores, o nº 13 (nem quem entrou, nem o mestre).
+   - Recusar só muda o status; o mestre recebe o nº 11.
+8. **Cancelar:** só o mestre. O convidado e os jogadores recebem 403; quem não participa, 404; não pendente, 409. O convidado recebe o nº 12.
+9. **Amizade desfeita** (`DELETE /api/friends/{userId}`, de qualquer lado): os convites pendentes entre os dois (campanhas em que um é mestre e o outro é o convidado, nos dois sentidos) são cancelados na mesma transação da remoção, e cada convidado recebe o nº 12. Convites aceitos não mudam. A Taberna chama Campanhas pela porta `IConvitesEntreAmigos`.
+10. **Campanha excluída:** quem tinha convite pendente recebe o nº 12 (lido antes de apagar; os convites vão junto pelo cascade). Os jogadores continuam recebendo o nº 18.
+
+11. **Corridas** (no padrão da Taberna, pelo 23505 do Postgres):
+    - Dois convites simultâneos para a mesma pessoa batem no índice `ix_campaign_invites_pendente` e dão **409** com `ja_convidado` na extensão `convidados`. Vem só quem colidiu; se o banco não mostrar ninguém, vem a lista toda.
+    - Dois aceites simultâneos do mesmo convite batem na PK `pk_campaign_members` e dão **409** "não está mais pendente". A transação desfaz o status, o jogador e a grade, e nenhum aviso sai.
+
+Modelo: `campaign_invites` (`id`, `campaign_id` com cascade, `invited_by`, `user_id`, `status`, `created_at`, `responded_at`), migration `AddConvitesDeCampanha`. Regras no `ConviteService`, com o `AcessoACampanha` para mestre e membro; o card é montado por `CardDoConvite`.
+
+Nos testes, `ConvitesDeTeste` cria um mestre com amigos (`CriarMestreComAmigosAsync`), grava convites direto no banco com status e data controláveis (`ConvidarNoBancoAsync`) e chama os endpoints (`ConvidarAsync`, `AceitarAsync`, `RecusarAsync`, `CancelarAsync`).
+
+Nos testes, `CampanhasDeTeste` cria campanhas pela API (`CriarCampanhaAsync`, `CriarUsuarioComCampanhasAsync`), põe um jogador direto no banco com a campanha no início da grade dele (`AdicionarJogadorAsync`, como o aceite do convite vai fazer) e lê a grade e as linhas da campanha no banco (`OrdemNoBancoAsync`, `LinhasDaCampanhaAsync`).
+
 ## Notificações
 
-Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso, emailDestino?)`), decide os canais de cada tipo, grava o sininho e manda o e-mail. Contas e Taberna só chamam esse serviço; ninguém mais manda e-mail direto.
+Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso, emailDestino?)`), decide os canais de cada tipo, grava o sininho e manda o e-mail. Contas, Taberna e Campanhas só chamam esse serviço; ninguém mais manda e-mail direto.
 
-- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)` e `AmizadeRecusada(...)`.
+- Cada tipo é um record (`Aviso`): `BoasVindas`, `RedefinicaoDeSenha(link)`, `SenhaAlterada`, `EmailAlterado(emailNovo)`, `ConfirmacaoDeEmail(link)`, `AmizadeRecebida(...)`, `AmizadeAceita(...)`, `AmizadeRecusada(...)`, `ConviteRecebido(...)`, `ConviteAceito(...)`, `ConviteRecusado(...)`, `ConviteCancelado(...)`, `JogadorEntrou(...)`, `CampanhaEditada(...)` e `CampanhaExcluida(...)`.
 - O `emailDestino` é para quando o e-mail não vai para o endereço atual do usuário: o antigo no nº 4 e o novo na confirmação.
 
 **Matriz** (`MatrizDeNotificacoes`, o único lugar com os canais):
@@ -285,6 +400,13 @@ Um serviço central, o `Notificador` (`INotificador.NotificarAsync(userId, aviso
 | `amizade_recebida` | 5 | sim | fila | destinatário do pedido | `{pedidoId, deUserId, deNome, deNick}` |
 | `amizade_aceita` | 6 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
 | `amizade_recusada` | 7 | sim | — | quem enviou o pedido | `{userId, nome, nick}` |
+| `convite_recebido` | 9 | sim | fila | o convidado | `{conviteId, campanhaId, campanhaNome, mestreNome, mestreNick}` |
+| `convite_aceito` | 10 | sim | — | o mestre | `{conviteId, campanhaId, campanhaNome, userId, nome, nick}` |
+| `convite_recusado` | 11 | sim | — | o mestre | `{conviteId, campanhaId, campanhaNome, userId, nome, nick}` |
+| `convite_cancelado` | 12 | sim | — | o convidado (cancelado pelo mestre, amizade desfeita ou campanha excluída) | `{campanhaId, campanhaNome}` |
+| `jogador_entrou` | 13 | sim | fila | os outros jogadores | `{campanhaId, campanhaNome, userId, nome, nick}` |
+| `campanha_editada` | 17 | sim | — | os jogadores (não o mestre) | `{campanhaId, campanhaNome}` |
+| `campanha_excluida` | 18 | sim | fila | os jogadores (não o mestre) | `{campanhaNome, mestreNome}` |
 
 - O amigo removido (nº 8) não tem tipo: ninguém é avisado.
 - O front monta o texto: a API guarda e devolve só `tipo` e `dados`. Os `dados` levam os ids e os nomes **de quando a notificação foi criada** (não são atualizados se a pessoa mudar o nome ou o nick).
@@ -313,11 +435,14 @@ Nos testes, `NotificacoesDeTeste` grava notificações direto no banco, com o `c
 
 ## Tempo real
 
-SignalR (sem backplane: a API roda numa VM só). O hub `NotificationHub` fica em **`/hubs/notifications`**, com `[Authorize]`. O cliente não chama nenhum método: o hub só empurra os eventos do sininho.
+SignalR (sem backplane: a API roda numa VM só). São dois hubs, os dois com `[Authorize]` e a mesma autenticação:
+
+- `NotificationHub`, em **`/hubs/notifications`**: o sininho. O cliente não chama nenhum método; o hub só empurra os eventos para o usuário.
+- `CampaignHub`, em **`/hubs/campaign`**: o que muda numa campanha aberta. Veja [CampaignHub](#campaignhub).
 
 **Autenticação**
 
-- É o mesmo JWT da API. No navegador, o WebSocket não manda header, então o token vai na query: `/hubs/notifications?access_token=<token>` (no `@microsoft/signalr`, use o `accessTokenFactory`).
+- É o mesmo JWT da API. No navegador, o WebSocket não manda header, então o token vai na query: `/hubs/notifications?access_token=<token>` ou `/hubs/campaign?access_token=<token>` (no `@microsoft/signalr`, use o `accessTokenFactory`).
 - A query `access_token` **só vale em caminhos que começam com `/hubs`** (`JwtBearerEvents.OnMessageReceived`). Num endpoint REST ela é ignorada, e sem header dá 401.
 - Token ausente, inválido ou expirado: a conexão é recusada (401 no negotiate).
 - O token não vai para o log. O único log que imprime a URL com a query é o de início e fim de requisição (`Microsoft.AspNetCore.Hosting.Diagnostics`). O `Program` trava esse log em `Warning`, mesmo que a configuração suba `Microsoft.AspNetCore` para Information.
@@ -339,9 +464,38 @@ SignalR (sem backplane: a API roda numa VM só). O hub `NotificationHub` fica em
 - Ação na notificação de outro usuário (404) não manda nada para ninguém.
 - A emissão fica num lugar só, o `EventosDoSininho` (Application), usado pelo `Notificador` e pelo `NotificacoesService`. A porta é a `INotificacoesTempoReal`, implementada na Api por `HubNotificacoesTempoReal` (`IHubContext<NotificationHub>`).
 - **Falha ao empurrar não quebra a requisição:** o `EventosDoSininho` loga um Warning (só o nome do evento, sem dados pessoais) e segue. O que foi gravado aparece no `GET`.
-- CORS: o hub usa a mesma policy `Front`, com credenciais.
+- CORS: os hubs usam a mesma policy `Front`, com credenciais.
 
-Nos testes, `ConexaoNoHub` abre a conexão pelo TestServer, com transporte LongPolling e o token na query, sem header. Ele guarda os eventos recebidos e tem `EsperarAsync`/`NaoRecebeAsync`, com timeout curto. `LogsCapturados` captura as linhas de log da API.
+### CampaignHub
+
+**O front entra no grupo ao abrir a campanha e sai ao fechar.** Sem `JoinCampaign`, a conexão não recebe nada da campanha.
+
+| Método (o cliente chama) | O que faz |
+| --- | --- |
+| `JoinCampaign(campanhaId)` | Só o mestre ou um jogador, conferido a cada chamada. Põe a conexão no grupo `campaign:{id}` e, se for o mestre, também no `campaign:{id}:mestre`. Quem não participa, ou campanha inexistente, recebe `HubException` com a mensagem genérica "Campanha não encontrada" (não revela que a campanha existe). |
+| `LeaveCampaign(campanhaId)` | Tira a conexão dos dois grupos. Não dá erro se ela não estava neles. |
+
+- Os grupos são por conexão: cada aba (ou aparelho) entra no seu. Os nomes ficam em `GruposDaCampanha` (`Todos(id)` e `Mestre(id)`).
+- Depois de reconectar (por exemplo, com o token novo do refresh), o front chama `JoinCampaign` de novo: a conexão nova não está em grupo nenhum.
+
+**Eventos** (payload em camelCase; saem só **depois** de gravar no banco; nenhum leva e-mail):
+
+| Evento | Quando | Para quem | Payload |
+| --- | --- | --- | --- |
+| `MemberChanged` | aceite de convite (o jogador entrou) | `campaign:{id}` | `{campanhaId, tipo: "entrou", membro}`, com `membro` no formato do `GET /campaigns/{id}/members`: `{userId, nome, nick, avatarUrl, papel, entrouEm, ficha}` |
+| `CampaignUpdated` | `PUT /campaigns/{id}` que mudou algo | `campaign:{id}` | `{id, nome, descricao, sistema: {slug, nome}, capaUrl, bannerUrl}`, sem `papel` (o evento é igual para todos) |
+| `CampaignDeleted` | `DELETE /campaigns/{id}` | `campaign:{id}` | `{campanhaId, campanhaNome}` |
+| `InvitesChanged` | convite criado (na criação da campanha ou depois), aceito, recusado ou cancelado (inclusive pela amizade desfeita) | só `campaign:{id}:mestre` | `{campanhaId, acao: "criado" \| "aceito" \| "recusado" \| "cancelado", convite: {id, status, convidado: {userId, nome, nick, avatarUrl}, criadoEm}}` |
+
+- O `PUT` igual ao estado atual não manda `CampaignUpdated` (nem o aviso nº 17).
+- Os jogadores não recebem `InvitesChanged`: os convites são só do mestre.
+- Na criação da campanha com convidados, ninguém está no grupo ainda, mas o `InvitesChanged` sai do mesmo jeito.
+- Na exclusão, os convites pendentes apagados junto com a campanha não geram `InvitesChanged`: vale o `CampaignDeleted`. Depois dele, `JoinCampaign` na mesma campanha dá "Campanha não encontrada".
+- A emissão fica num lugar só, o `EventosDaCampanha` (Application), usado pelo `CampanhaService` e pelo `ConviteService`. A porta é a `ICampanhaTempoReal`, implementada na Api por `HubCampanhaTempoReal` (`IHubContext<CampaignHub>`). Na amizade desfeita, a Taberna executa, depois de confirmar a transação, o que o `ConviteService` devolve (os avisos nº 12 e o `InvitesChanged`).
+- **Falha ao empurrar não quebra a requisição:** o `EventosDaCampanha` loga um Warning (só o nome do evento, sem dados pessoais) e segue.
+- Saída de jogador fica para o módulo dele (`TODO(saida-de-player)`): as conexões do jogador removido saem dos grupos, e o grupo recebe `MemberChanged` com `tipo: "saiu"`.
+
+Nos testes, `ConexaoNoHub` abre a conexão num dos hubs (`AbrirAsync` com a rota) pelo TestServer, com transporte LongPolling e o token na query, sem header. Ele guarda os eventos recebidos e tem `EsperarAsync`/`NaoRecebeAsync`, com timeout curto, além de `EntrarNaCampanhaAsync`/`SairDaCampanhaAsync` para o hub de campanha. `TempoRealDeTeste.EntrarNaCampanhaAsync` abre e já entra no grupo. `TempoRealGravado` substitui o hub quando ninguém pode estar no grupo. `LogsCapturados` captura as linhas de log da API.
 
 ## Jobs (Hangfire)
 
@@ -356,7 +510,7 @@ Hangfire (`Hangfire.AspNetCore` + `Hangfire.PostgreSql`) com storage no mesmo Po
 
 ## E-mail
 
-E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem seis: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`) e pedido de amizade (no `POST /api/friends/requests`, para o destinatário).
+E-mails em texto simples, em PT-BR, enviados por SMTP com MailKit (`SmtpEmailSender`) pelo Gmail, em dev e em produção. Os textos ficam todos em `src/RPGuild.Application/Notificacoes/EmailTemplates.cs`. Nesta fase saem nove: boas-vindas (depois do register), redefinição de senha (no forgot-password), confirmação do novo e-mail (no `PUT /api/me/email`, para o endereço novo), e-mail alterado (no `confirm`, para o endereço **antigo**), senha alterada (no `PUT /api/me/password`), pedido de amizade (no `POST /api/friends/requests`, para o destinatário), convite de campanha (com o link `{Front:BaseUrl}/convites/{conviteId}`), jogador que entrou (com o link `{Front:BaseUrl}/campanhas/{campanhaId}`) e campanha excluída (no `DELETE /api/campaigns/{id}`, para os jogadores).
 
 **Senha de app do Gmail**
 

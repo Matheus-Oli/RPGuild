@@ -26,7 +26,18 @@ public class AssinarUploadRequestValidatorTests
     [Theory]
     [InlineData("capa")]
     [InlineData("banner")]
+    public void Validate_CapaOuBannerComContentTypePermitido_NaoTemErros(string tipo)
+    {
+        // Act
+        var resultado = _validator.TestValidate(new AssinarUploadRequest(tipo, "image/webp"));
+
+        // Assert
+        resultado.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
     [InlineData("retrato")]
+    [InlineData("Capa")]
     [InlineData("qualquer")]
     public void Validate_TipoNaoSuportado_TemErroEmTipoDizendoQueAindaNaoESuportado(string tipo)
     {

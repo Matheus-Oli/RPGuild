@@ -9,6 +9,11 @@ namespace RPGuild.Application.Notificacoes;
 /// </summary>
 public abstract record Aviso([property: JsonIgnore] string Tipo);
 
+/// <summary>
+/// Um aviso preparado para mandar depois (ex.: só depois de confirmar uma transação).
+/// </summary>
+public sealed record AvisoParaEnviar(Guid UserId, Aviso Aviso);
+
 /// <summary>Nº 1.</summary>
 public sealed record BoasVindas() : Aviso(TiposDeNotificacao.BoasVindas);
 
@@ -33,3 +38,30 @@ public sealed record AmizadeAceita(Guid UserId, string Nome, string Nick) : Avis
 
 /// <summary>Nº 7, para quem enviou o pedido, com quem recusou.</summary>
 public sealed record AmizadeRecusada(Guid UserId, string Nome, string Nick) : Aviso(TiposDeNotificacao.AmizadeRecusada);
+
+/// <summary>Nº 17, para os jogadores, com o nome depois da edição.</summary>
+public sealed record CampanhaEditada(Guid CampanhaId, string CampanhaNome) : Aviso(TiposDeNotificacao.CampanhaEditada);
+
+/// <summary>Nº 18, para os jogadores. Sem o id: a campanha não existe mais.</summary>
+public sealed record CampanhaExcluida(string CampanhaNome, string MestreNome) : Aviso(TiposDeNotificacao.CampanhaExcluida);
+
+/// <summary>Nº 9, para o convidado, com o mestre de agora.</summary>
+public sealed record ConviteRecebido(Guid ConviteId, Guid CampanhaId, string CampanhaNome, string MestreNome, string MestreNick)
+    : Aviso(TiposDeNotificacao.ConviteRecebido);
+
+/// <summary>Nº 10, para o mestre, com quem aceitou.</summary>
+public sealed record ConviteAceito(Guid ConviteId, Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
+    : Aviso(TiposDeNotificacao.ConviteAceito);
+
+/// <summary>Nº 13, para os outros jogadores (nem quem entrou, nem o mestre), com quem entrou.</summary>
+public sealed record JogadorEntrou(Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
+    : Aviso(TiposDeNotificacao.JogadorEntrou);
+
+/// <summary>Nº 11, para o mestre, com quem recusou.</summary>
+public sealed record ConviteRecusado(Guid ConviteId, Guid CampanhaId, string CampanhaNome, Guid UserId, string Nome, string Nick)
+    : Aviso(TiposDeNotificacao.ConviteRecusado);
+
+/// <summary>
+/// Nº 12, para o convidado: o mestre cancelou, a amizade foi desfeita ou a campanha foi excluída.
+/// </summary>
+public sealed record ConviteCancelado(Guid CampanhaId, string CampanhaNome) : Aviso(TiposDeNotificacao.ConviteCancelado);

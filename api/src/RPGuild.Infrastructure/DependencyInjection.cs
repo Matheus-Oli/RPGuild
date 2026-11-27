@@ -7,11 +7,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using RPGuild.Application.Campanhas;
 using RPGuild.Application.Comum;
 using RPGuild.Application.Contas;
 using RPGuild.Application.Notificacoes;
 using RPGuild.Application.Taberna;
 using RPGuild.Application.Uploads;
+using RPGuild.Infrastructure.Campanhas;
 using RPGuild.Infrastructure.Comum;
 using RPGuild.Infrastructure.Contas;
 using RPGuild.Infrastructure.Identity;
@@ -78,10 +80,16 @@ public static class DependencyInjection
         services.Configure<DataProtectionTokenProviderOptions>(options =>
             options.TokenLifespan = RegrasDeConta.ValidadeDoTokenDeRedefinicao);
 
+        services.AddScoped<ITransacao, TransacaoDoBanco>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAmizadeRepository, AmizadeRepository>();
         services.AddScoped<INotificacaoRepository, NotificacaoRepository>();
+        services.AddScoped<ISistemasRepository, SistemasRepository>();
+        services.AddScoped<ICampanhaRepository, CampanhaRepository>();
+        services.AddScoped<ICampanhasEmComum, CampanhaRepository>();
+        services.AddScoped<IGradeDeCampanhasRepository, GradeDeCampanhasRepository>();
+        services.AddScoped<IConviteRepository, ConviteRepository>();
 
         var jwt = JwtOptions.Ler(configuration);
         services.AddSingleton(jwt);

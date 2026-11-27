@@ -126,6 +126,225 @@ namespace RPGuild.Infrastructure.Persistence.Migrations
                     b.ToTable("user_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.Campanha", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BannerPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("banner_path");
+
+                    b.Property<string>("CapaPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("capa_path");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("descricao");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nome");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<int>("SystemId")
+                        .HasColumnType("integer")
+                        .HasColumnName("system_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_campaigns");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_campaigns_owner_id");
+
+                    b.HasIndex("SystemId")
+                        .HasDatabaseName("ix_campaigns_system_id");
+
+                    b.ToTable("campaigns", (string)null);
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.ConviteDeCampanha", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("InvitedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invited_by");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_campaign_invites");
+
+                    b.HasIndex("InvitedBy")
+                        .HasDatabaseName("ix_campaign_invites_invited_by");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_campaign_invites_user_id");
+
+                    b.HasIndex("CampaignId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_campaign_invites_pendente")
+                        .HasFilter("status = 'pendente'");
+
+                    b.ToTable("campaign_invites", (string)null);
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.MembroDaCampanha", b =>
+                {
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.HasKey("CampaignId", "UserId")
+                        .HasName("pk_campaign_members");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_campaign_members_user_id");
+
+                    b.ToTable("campaign_members", (string)null);
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.PosicaoNaGrade", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<int>("Posicao")
+                        .HasColumnType("integer")
+                        .HasColumnName("posicao");
+
+                    b.HasKey("UserId", "CampaignId")
+                        .HasName("pk_campaign_user_order");
+
+                    b.HasIndex("CampaignId")
+                        .HasDatabaseName("ix_campaign_user_order_campaign_id");
+
+                    b.ToTable("campaign_user_order", (string)null);
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.SistemaDeJogo", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nome");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("slug");
+
+                    b.HasKey("Id")
+                        .HasName("pk_game_systems");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_systems_slug");
+
+                    b.ToTable("game_systems", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Ativo = true,
+                            Nome = "D&D 5e (regras de 2024)",
+                            Slug = "dnd2024"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Ativo = false,
+                            Nome = "Ordem Paranormal 2",
+                            Slug = "ordem2"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Ativo = false,
+                            Nome = "Tormenta 20",
+                            Slug = "t20"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Ativo = false,
+                            Nome = "Call of Cthulhu",
+                            Slug = "coc"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Ativo = false,
+                            Nome = "Deadlands",
+                            Slug = "deadlands"
+                        });
+                });
+
             modelBuilder.Entity("RPGuild.Domain.Contas.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -402,6 +621,81 @@ namespace RPGuild.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_tokens_users_user_id");
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.Campanha", b =>
+                {
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaigns_users_owner_id");
+
+                    b.HasOne("RPGuild.Domain.Campanhas.SistemaDeJogo", null)
+                        .WithMany()
+                        .HasForeignKey("SystemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaigns_game_systems_system_id");
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.ConviteDeCampanha", b =>
+                {
+                    b.HasOne("RPGuild.Domain.Campanhas.Campanha", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_invites_campaigns_campaign_id");
+
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InvitedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_invites_users_invited_by");
+
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_invites_users_user_id");
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.MembroDaCampanha", b =>
+                {
+                    b.HasOne("RPGuild.Domain.Campanhas.Campanha", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_members_campaigns_campaign_id");
+
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_members_users_user_id");
+                });
+
+            modelBuilder.Entity("RPGuild.Domain.Campanhas.PosicaoNaGrade", b =>
+                {
+                    b.HasOne("RPGuild.Domain.Campanhas.Campanha", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_user_order_campaigns_campaign_id");
+
+                    b.HasOne("RPGuild.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_campaign_user_order_users_user_id");
                 });
 
             modelBuilder.Entity("RPGuild.Domain.Contas.RefreshToken", b =>

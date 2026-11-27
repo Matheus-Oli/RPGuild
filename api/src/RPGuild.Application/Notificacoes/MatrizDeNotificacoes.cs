@@ -13,6 +13,13 @@ public static class TiposDeNotificacao
     public const string AmizadeRecebida = "amizade_recebida";
     public const string AmizadeAceita = "amizade_aceita";
     public const string AmizadeRecusada = "amizade_recusada";
+    public const string CampanhaEditada = "campanha_editada";
+    public const string CampanhaExcluida = "campanha_excluida";
+    public const string ConviteRecebido = "convite_recebido";
+    public const string ConviteAceito = "convite_aceito";
+    public const string ConviteRecusado = "convite_recusado";
+    public const string ConviteCancelado = "convite_cancelado";
+    public const string JogadorEntrou = "jogador_entrou";
 }
 
 public enum EnvioPorEmail
@@ -48,6 +55,13 @@ public static class MatrizDeNotificacoes
         [TiposDeNotificacao.AmizadeRecebida] = new(Sininho: true, EnvioPorEmail.Fila),
         [TiposDeNotificacao.AmizadeAceita] = new(Sininho: true, EnvioPorEmail.Nenhum),
         [TiposDeNotificacao.AmizadeRecusada] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.CampanhaEditada] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.CampanhaExcluida] = new(Sininho: true, EnvioPorEmail.Fila),
+        [TiposDeNotificacao.ConviteRecebido] = new(Sininho: true, EnvioPorEmail.Fila),
+        [TiposDeNotificacao.ConviteAceito] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.ConviteRecusado] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.ConviteCancelado] = new(Sininho: true, EnvioPorEmail.Nenhum),
+        [TiposDeNotificacao.JogadorEntrou] = new(Sininho: true, EnvioPorEmail.Fila),
     };
 
     public static CanaisDaNotificacao CanaisDe(string tipo) =>

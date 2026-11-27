@@ -11,6 +11,9 @@ public sealed class AmizadeService(
     IIdentityService identity,
     IStorageService storage,
     INotificador notificador,
+    IConvitesEntreAmigos convites,
+    ICampanhasEmComum campanhasEmComum,
+    ITransacao transacao,
     TimeProvider relogio)
 {
     /// <summary>
@@ -73,16 +76,14 @@ public sealed class AmizadeService(
     public async Task<IReadOnlyList<AmigoResponse>> ListarAmigosAsync(Guid userId, CancellationToken cancellationToken)
     {
         var amigos = await amizades.ListarAmigosAsync(userId, cancellationToken);
+        var emComum = await campanhasEmComum.ContarAsync(userId, [.. amigos.Select(a => a.Amigo.Id)], cancellationToken);
         return
         [
             .. amigos.Select(a =>
             {
                 var amigo = Usuario(a.Amigo);
-
-                // TODO(campanhas): calcular campanhas em comum
-                const int campanhasEmComum = 0;
-
-                return new AmigoResponse(amigo.UserId, amigo.Nome, amigo.Nick, amigo.AvatarUrl, campanhasEmComum, a.AmigosDesde);
+                return new AmigoResponse(
+                    amigo.UserId, amigo.Nome, amigo.Nick, amigo.AvatarUrl, emComum.GetValueOrDefault(amigo.UserId), a.AmigosDesde);
             }),
         ];
     }
@@ -140,6 +141,7 @@ public sealed class AmizadeService(
 
     /// <summary>
     /// Qualquer um dos dois pode desfazer a amizade: a linha é apagada e quem foi removido não é avisado (aviso nº 8).
+    /// Os convites de campanha pendentes entre os dois são cancelados junto, e o convidado recebe o aviso nº 12.
     /// </summary>
     public async Task<Resultado<Vazio>> RemoverAmigoAsync(Guid userId, Guid amigoId, CancellationToken cancellationToken)
     {
@@ -149,8 +151,17 @@ public sealed class AmizadeService(
             return ErrosDaTaberna.AmizadeNaoEncontrada;
         }
 
-        amizades.Remover(amizade);
-        await amizades.SalvarAlteracoesAsync(cancellationToken);
+        Func<CancellationToken, Task> depoisDeConfirmar = _ => Task.CompletedTask;
+        await transacao.ExecutarAsync(
+            async () =>
+            {
+                amizades.Remover(amizade);
+                await amizades.SalvarAlteracoesAsync(cancellationToken);
+                depoisDeConfirmar = await convites.CancelarPendentesEntreAsync(userId, amigoId, cancellationToken);
+            },
+            cancellationToken);
+
+        await depoisDeConfirmar(cancellationToken);
         return Vazio.Valor;
     }
 

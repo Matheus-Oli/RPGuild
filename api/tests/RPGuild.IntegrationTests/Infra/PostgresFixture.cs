@@ -46,7 +46,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Apaga os dados de todas as tabelas do banco padrão, menos o histórico de migrations.
+    /// Apaga os dados de todas as tabelas do banco padrão, menos o histórico de migrations e os seeds de referência.
     /// Roda ao subir a fixture; chame também numa classe de teste que precise começar do banco limpo.
     /// </summary>
     public async Task LimparAsync()
@@ -59,7 +59,8 @@ public sealed class PostgresFixture : IAsyncLifetime
             DbAdapter = DbAdapter.Postgres,
             // Só o schema do EF: o "hangfire" (fila e jobs, criado pela própria lib) fica de fora.
             SchemasToInclude = ["public"],
-            TablesToIgnore = [new Table("__EFMigrationsHistory")],
+            // Dados de referência que vêm das migrations (seed), e não dos testes.
+            TablesToIgnore = [new Table("__EFMigrationsHistory"), new Table("game_systems")],
         });
         await respawner.ResetAsync(conexao);
     }

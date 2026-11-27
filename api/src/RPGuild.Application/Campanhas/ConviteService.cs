@@ -1,0 +1,393 @@
+using RPGuild.Application.Comum;
+using RPGuild.Application.Contas;
+using RPGuild.Application.Notificacoes;
+using RPGuild.Application.Taberna;
+using RPGuild.Application.Uploads;
+using RPGuild.Domain.Campanhas;
+using RPGuild.Domain.Taberna;
+
+namespace RPGuild.Application.Campanhas;
+
+/// <summary>
+/// Convites de campanha: só amigos do mestre, um pendente por pessoa, e só o convidado responde.
+/// </summary>
+public sealed class ConviteService(
+    IConviteRepository convites,
+    ICampanhaRepository campanhas,
+    IAmizadeRepository amizades,
+    AcessoACampanha acessos,
+    GradeDeCampanhas grade,
+    ITransacao transacao,
+    IIdentityService identity,
+    IStorageService storage,
+    INotificador notificador,
+    EventosDaCampanha eventos,
+    TimeProvider relogio) : IConvitesEntreAmigos
+{
+    /// <summary>
+    /// Só o mestre. Tudo ou nada: se alguém da lista não pode ser convidado, ninguém é. O request já chega validado.
+    /// </summary>
+    public async Task<Resultado<ConviteDaCampanhaResponse[]>> ConvidarAsync(
+        Guid userId, Guid campanhaId, ConvidarRequest request, CancellationToken cancellationToken)
+    {
+        var acesso = await acessos.DeMestreAsync(userId, campanhaId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!;
+        }
+
+        var campanha = await campanhas.BuscarComPessoasAsync(campanhaId, cancellationToken)
+            ?? throw new InvalidOperationException($"A campanha {campanhaId} sumiu no meio da requisição.");
+        var pendentes = await convites.PendentesDaCampanhaAsync(campanhaId, cancellationToken);
+        var erro = await ValidarAsync(
+            userId,
+            request.UserIds,
+            [.. campanha.Jogadores.Select(j => j.Pessoa.Id)],
+            [.. pendentes.Select(p => p.UserId)],
+            cancellationToken);
+        if (erro is not null)
+        {
+            return erro;
+        }
+
+        var novos = await AdicionarAsync(campanhaId, userId, request.UserIds, cancellationToken);
+        try
+        {
+            await convites.SalvarAlteracoesAsync(cancellationToken);
+        }
+        catch (ConvitePendenteJaExisteException)
+        {
+            // Outro convite para alguém da lista entrou ao mesmo tempo: mesmo 409 de quem já tem pendente.
+            return await ConvidadosQueColidiramAsync(campanhaId, request.UserIds, cancellationToken);
+        }
+
+        await AvisarConvidadosAsync(novos, campanha, cancellationToken);
+
+        var respostas = new List<ConviteDaCampanhaResponse>();
+        foreach (var convite in novos)
+        {
+            respostas.Add(new ConviteDaCampanhaResponse(convite.Id, await PessoaAsync(convite.UserId, cancellationToken), convite.CreatedAt));
+        }
+
+        return respostas.ToArray();
+    }
+
+    /// <summary>
+    /// O card do convite para qualquer usuário logado: o convidado e o mestre veem tudo; os outros, só para quem é.
+    /// </summary>
+    public async Task<Resultado<CardDoConviteVisto>> CardAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
+    {
+        var convite = await convites.BuscarPorIdAsync(conviteId, cancellationToken);
+        var campanha = convite is null ? null : await campanhas.BuscarComPessoasAsync(convite.CampaignId, cancellationToken);
+        if (convite is null || campanha is null)
+        {
+            return ErrosDeConvite.ConviteNaoEncontrado;
+        }
+
+        return CardDoConvite.Montar(
+            convite,
+            campanha,
+            await PessoaGuardadaAsync(convite.InvitedBy, cancellationToken),
+            await PessoaGuardadaAsync(convite.UserId, cancellationToken),
+            userId,
+            Url);
+    }
+
+    /// <summary>
+    /// Os convites pendentes da campanha, os mais novos primeiro. Só o mestre.
+    /// </summary>
+    public async Task<Resultado<ConviteDaCampanhaResponse[]>> ListarDaCampanhaAsync(
+        Guid userId, Guid campanhaId, CancellationToken cancellationToken)
+    {
+        var acesso = await acessos.DeMestreAsync(userId, campanhaId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!;
+        }
+
+        var pendentes = await convites.ListarPendentesDaCampanhaAsync(campanhaId, cancellationToken);
+        return pendentes.Select(c => new ConviteDaCampanhaResponse(c.Id, Pessoa(c.Convidado), c.CriadoEm)).ToArray();
+    }
+
+    /// <summary>
+    /// Os convites pendentes que o usuário recebeu, os mais novos primeiro.
+    /// </summary>
+    public async Task<IReadOnlyList<MeuConviteResponse>> ListarMeusAsync(Guid userId, CancellationToken cancellationToken) =>
+    [
+        .. (await convites.ListarPendentesDoUsuarioAsync(userId, cancellationToken)).Select(c => new MeuConviteResponse(
+            c.Id,
+            new CampanhaDoConviteResponse(c.CampanhaId, c.CampanhaNome, new SistemaDaCampanhaResponse(c.Sistema.Slug, c.Sistema.Nome), Url(c.CapaPath)),
+            Pessoa(c.Mestre),
+            c.CriadoEm)),
+    ];
+
+    /// <summary>
+    /// Confere a lista inteira e devolve o erro com todos os recusados, ou null. 400 vence 409.
+    /// </summary>
+    public async Task<Erro?> ValidarAsync(
+        Guid mestreId,
+        IReadOnlyList<Guid> userIds,
+        IReadOnlyCollection<Guid> jogadores,
+        IReadOnlyCollection<Guid> comPendente,
+        CancellationToken cancellationToken)
+    {
+        var invalidos = new List<ConvidadoInvalido>();
+        foreach (var id in userIds)
+        {
+            var motivo = id == mestreId ? MotivosDeConvite.Mestre
+                : !await SaoAmigosAsync(mestreId, id, cancellationToken) ? MotivosDeConvite.NaoAmigo
+                : jogadores.Contains(id) ? MotivosDeConvite.JaJogador
+                : comPendente.Contains(id) ? MotivosDeConvite.JaConvidado
+                : null;
+            if (motivo is not null)
+            {
+                invalidos.Add(new ConvidadoInvalido(id, motivo));
+            }
+        }
+
+        return invalidos.Count == 0 ? null : ErrosDeConvite.ConvidadosInvalidos(invalidos);
+    }
+
+    /// <summary>
+    /// Os convites pendentes, já validados, prontos para salvar (sem salvar).
+    /// </summary>
+    public async Task<IReadOnlyList<ConviteDeCampanha>> AdicionarAsync(
+        Guid campanhaId, Guid mestreId, IReadOnlyList<Guid> userIds, CancellationToken cancellationToken)
+    {
+        var agora = relogio.GetUtcNow();
+        var novos = userIds.Select(id => ConviteDeCampanha.Criar(campanhaId, mestreId, id, agora)).ToList();
+        foreach (var convite in novos)
+        {
+            await convites.AdicionarAsync(convite, cancellationToken);
+        }
+
+        return novos;
+    }
+
+    /// <summary>
+    /// Aviso nº 9 para cada convidado e o InvitesChanged "criado" para o mestre. Só depois de gravar os convites.
+    /// </summary>
+    public async Task AvisarConvidadosAsync(
+        IEnumerable<ConviteDeCampanha> novos, CampanhaGuardada campanha, CancellationToken cancellationToken)
+    {
+        foreach (var convite in novos)
+        {
+            await notificador.NotificarAsync(
+                convite.UserId,
+                new ConviteRecebido(convite.Id, campanha.Campanha.Id, campanha.Campanha.Nome, campanha.Mestre.Nome, campanha.Mestre.Nick),
+                cancellationToken);
+            await ConviteMudouAsync(convite, AcoesDeConvite.Criado, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Só o convidado, e só pendente. Vira jogador e a campanha entra no início da grade dele, tudo junto. Depois, o
+    /// mestre recebe o aviso nº 10 e o InvitesChanged, os outros jogadores, o nº 13, e o grupo da campanha, o
+    /// MemberChanged.
+    /// </summary>
+    public async Task<Resultado<Vazio>> AceitarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
+    {
+        var convite = await DoConvidadoAsync(userId, conviteId, cancellationToken);
+        if (!convite.Sucesso)
+        {
+            return convite.Erro!;
+        }
+
+        var agora = relogio.GetUtcNow();
+        try
+        {
+            await transacao.ExecutarAsync(
+                async () =>
+                {
+                    convite.Valor!.Aceitar(agora);
+                    await campanhas.AdicionarJogadorAsync(new MembroDaCampanha(convite.Valor.CampaignId, userId, agora), cancellationToken);
+                    await convites.SalvarAlteracoesAsync(cancellationToken);
+                    await grade.ColocarNoInicioAsync(userId, convite.Valor.CampaignId, cancellationToken);
+                },
+                cancellationToken);
+        }
+        catch (JogadorJaNaCampanhaException)
+        {
+            // Outro aceite do mesmo convite entrou antes; a transação desfez o status, o jogador e a grade.
+            return ErrosDeConvite.ConviteNaoPendente;
+        }
+
+        await AvisarEntradaAsync(convite.Valor!, cancellationToken);
+        await ConviteMudouAsync(convite.Valor!, AcoesDeConvite.Aceito, cancellationToken);
+        return Vazio.Valor;
+    }
+
+    /// <summary>
+    /// Só o convidado, e só pendente. O mestre recebe o aviso nº 11 e o InvitesChanged.
+    /// </summary>
+    public async Task<Resultado<Vazio>> RecusarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
+    {
+        var convite = await DoConvidadoAsync(userId, conviteId, cancellationToken);
+        if (!convite.Sucesso)
+        {
+            return convite.Erro!;
+        }
+
+        convite.Valor!.Recusar(relogio.GetUtcNow());
+        await convites.SalvarAlteracoesAsync(cancellationToken);
+
+        if (await campanhas.BuscarPorIdAsync(convite.Valor.CampaignId, cancellationToken) is { } campanha)
+        {
+            var quem = await PessoaGuardadaAsync(userId, cancellationToken);
+            await notificador.NotificarAsync(
+                campanha.OwnerId,
+                new ConviteRecusado(convite.Valor.Id, campanha.Id, campanha.Nome, quem.Id, quem.Nome, quem.Nick),
+                cancellationToken);
+        }
+
+        await ConviteMudouAsync(convite.Valor, AcoesDeConvite.Recusado, cancellationToken);
+        return Vazio.Valor;
+    }
+
+    /// <summary>
+    /// Só o mestre, e só pendente. O convidado e os jogadores recebem 403; quem não participa, 404. O convidado recebe
+    /// o aviso nº 12, e o mestre, o InvitesChanged.
+    /// </summary>
+    public async Task<Resultado<Vazio>> CancelarAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
+    {
+        var convite = await convites.BuscarPorIdAsync(conviteId, cancellationToken);
+        if (convite is null)
+        {
+            return ErrosDeConvite.ConviteNaoEncontrado;
+        }
+
+        if (convite.UserId == userId)
+        {
+            return ErrosDeCampanha.SoOMestre;
+        }
+
+        var acesso = await acessos.DeMestreAsync(userId, convite.CampaignId, cancellationToken);
+        if (!acesso.Sucesso)
+        {
+            return acesso.Erro!.Tipo == TipoErro.NaoEncontrado ? ErrosDeConvite.ConviteNaoEncontrado : acesso.Erro;
+        }
+
+        if (!convite.EstaPendente)
+        {
+            return ErrosDeConvite.ConviteNaoPendente;
+        }
+
+        convite.Cancelar(relogio.GetUtcNow());
+        await convites.SalvarAlteracoesAsync(cancellationToken);
+        await notificador.NotificarAsync(convite.UserId, new ConviteCancelado(acesso.Valor!.Id, acesso.Valor.Nome), cancellationToken);
+        await ConviteMudouAsync(convite, AcoesDeConvite.Cancelado, cancellationToken);
+        return Vazio.Valor;
+    }
+
+    /// <summary>
+    /// A amizade foi desfeita: os convites pendentes entre os dois, nos dois sentidos, ficam cancelados. Depois de
+    /// confirmar, o convidado recebe o aviso nº 12, e o mestre, o InvitesChanged.
+    /// </summary>
+    public async Task<Func<CancellationToken, Task>> CancelarPendentesEntreAsync(
+        Guid usuarioA, Guid usuarioB, CancellationToken cancellationToken)
+    {
+        var agora = relogio.GetUtcNow();
+        var cancelados = new List<(ConviteDeCampanha Convite, Campanha Campanha)>();
+        foreach (var (mestre, convidado) in new[] { (usuarioA, usuarioB), (usuarioB, usuarioA) })
+        {
+            foreach (var convite in await convites.PendentesEntreAsync(mestre, convidado, cancellationToken))
+            {
+                convite.Cancelar(agora);
+                var campanha = await campanhas.BuscarPorIdAsync(convite.CampaignId, cancellationToken)
+                    ?? throw new InvalidOperationException($"A campanha {convite.CampaignId} sumiu no meio da requisição.");
+                cancelados.Add((convite, campanha));
+            }
+        }
+
+        await convites.SalvarAlteracoesAsync(cancellationToken);
+        return async depoisCancellationToken =>
+        {
+            foreach (var (convite, campanha) in cancelados)
+            {
+                await notificador.NotificarAsync(convite.UserId, new ConviteCancelado(campanha.Id, campanha.Nome), depoisCancellationToken);
+                await ConviteMudouAsync(convite, AcoesDeConvite.Cancelado, depoisCancellationToken);
+            }
+        };
+    }
+
+    /// <summary>
+    /// O aviso nº 12 para quem tem convite pendente na campanha que vai ser excluída. Os convites vão junto com ela.
+    /// </summary>
+    public async Task<IReadOnlyList<AvisoParaEnviar>> AvisosDeCampanhaExcluidaAsync(Campanha campanha, CancellationToken cancellationToken) =>
+    [
+        .. (await convites.PendentesDaCampanhaAsync(campanha.Id, cancellationToken))
+            .Select(c => new AvisoParaEnviar(c.UserId, new ConviteCancelado(campanha.Id, campanha.Nome))),
+    ];
+
+    // Quem da lista tem pendente agora (o outro request já gravou). Se o banco não mostrar ninguém, vale a lista toda.
+    private async Task<Erro> ConvidadosQueColidiramAsync(Guid campanhaId, IReadOnlyList<Guid> userIds, CancellationToken cancellationToken)
+    {
+        var pendentes = (await convites.PendentesDaCampanhaAsync(campanhaId, cancellationToken)).Select(c => c.UserId).ToHashSet();
+        var colidiram = userIds.Where(pendentes.Contains).ToList();
+        return ErrosDeConvite.ConvidadosInvalidos(
+        [
+            .. (colidiram.Count > 0 ? colidiram : userIds).Select(id => new ConvidadoInvalido(id, MotivosDeConvite.JaConvidado)),
+        ]);
+    }
+
+    // O InvitesChanged para o grupo do mestre, com o convite como ficou e o convidado com os dados de agora.
+    private async Task ConviteMudouAsync(ConviteDeCampanha convite, string acao, CancellationToken cancellationToken) =>
+        await eventos.ConviteMudouAsync(
+            convite.CampaignId,
+            acao,
+            new ConviteDoEvento(convite.Id, convite.Status.Texto(), await PessoaAsync(convite.UserId, cancellationToken), convite.CreatedAt),
+            cancellationToken);
+
+    // Com os nomes de agora: a campanha, o mestre e quem entrou (como ficou gravado).
+    private async Task AvisarEntradaAsync(ConviteDeCampanha convite, CancellationToken cancellationToken)
+    {
+        var campanha = await campanhas.BuscarComPessoasAsync(convite.CampaignId, cancellationToken);
+        if (campanha?.Jogadores.SingleOrDefault(j => j.Pessoa.Id == convite.UserId) is not { } entrou)
+        {
+            return;
+        }
+
+        var quem = entrou.Pessoa;
+        var nome = campanha.Campanha.Nome;
+        await notificador.NotificarAsync(
+            campanha.Campanha.OwnerId, new ConviteAceito(convite.Id, campanha.Campanha.Id, nome, quem.Id, quem.Nome, quem.Nick), cancellationToken);
+
+        foreach (var jogador in campanha.Jogadores.Where(j => j.Pessoa.Id != quem.Id))
+        {
+            await notificador.NotificarAsync(
+                jogador.Pessoa.Id, new JogadorEntrou(campanha.Campanha.Id, nome, quem.Id, quem.Nome, quem.Nick), cancellationToken);
+        }
+
+        await eventos.JogadorEntrouAsync(
+            campanha.Campanha.Id, MembroDaCampanhaResponse.De(quem, PapeisNaCampanha.Jogador, entrou.EntrouEm, Url), cancellationToken);
+    }
+
+    // Para quem não é o convidado, o convite "não existe" (404).
+    private async Task<Resultado<ConviteDeCampanha>> DoConvidadoAsync(Guid userId, Guid conviteId, CancellationToken cancellationToken)
+    {
+        var convite = await convites.BuscarPorIdAsync(conviteId, cancellationToken);
+        if (convite is null || convite.UserId != userId)
+        {
+            return ErrosDeConvite.ConviteNaoEncontrado;
+        }
+
+        return convite.EstaPendente ? convite : ErrosDeConvite.ConviteNaoPendente;
+    }
+
+    private async Task<bool> SaoAmigosAsync(Guid mestreId, Guid userId, CancellationToken cancellationToken) =>
+        await amizades.BuscarDoParAsync(mestreId, userId, cancellationToken) is { Status: StatusDaAmizade.Aceita };
+
+    private PessoaDaCampanhaResponse Pessoa(PessoaGuardada pessoa) => new(pessoa.Id, pessoa.Nome, pessoa.Nick, Url(pessoa.AvatarPath));
+
+    private string? Url(string? path) => path is null ? null : storage.ObterUrlPublica(path);
+
+    private async Task<PessoaDaCampanhaResponse> PessoaAsync(Guid userId, CancellationToken cancellationToken) =>
+        Pessoa(await PessoaGuardadaAsync(userId, cancellationToken));
+
+    private async Task<PessoaGuardada> PessoaGuardadaAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var perfil = await identity.BuscarPerfilAsync(userId, cancellationToken)
+            ?? throw new InvalidOperationException($"O usuário {userId} sumiu no meio da requisição.");
+        return new PessoaGuardada(perfil.Id, perfil.Nome, perfil.Nick, perfil.AvatarPath);
+    }
+}

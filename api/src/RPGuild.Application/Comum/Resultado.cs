@@ -7,12 +7,14 @@ public enum TipoErro
     Conflito,
     Bloqueado,
     NaoEncontrado,
+    Proibido,
 }
 
 /// <summary>
 /// Falha esperada de um caso de uso. A Api traduz o <see cref="Tipo"/> para o status HTTP.
 /// </summary>
-public sealed record Erro(TipoErro Tipo, string Titulo, string Detalhe);
+/// <param name="Extensoes">Campos a mais no ProblemDetails (ex.: quais convidados foram recusados).</param>
+public sealed record Erro(TipoErro Tipo, string Titulo, string Detalhe, IReadOnlyDictionary<string, object>? Extensoes = null);
 
 /// <summary>
 /// Valor de sucesso de um caso de uso que não devolve nada.

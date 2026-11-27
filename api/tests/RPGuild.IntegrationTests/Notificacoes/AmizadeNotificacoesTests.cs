@@ -41,7 +41,7 @@ public sealed class AmizadeNotificacoesTests(PostgresFixture postgres) : IDispos
         // Arrange
         var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         var pedido = await _factory.PedirComSucessoAsync(a, b);
-        var emailsDeA = EmailsPara(a);
+        var emailsDeA = _factory.EmailsPara(a);
 
         // Act
         (await _factory.PostAsync(b, $"{ClienteDaTaberna.Pedido(pedido.Id)}/{acao}")).EnsureSuccessStatusCode();
@@ -53,7 +53,7 @@ public sealed class AmizadeNotificacoesTests(PostgresFixture postgres) : IDispos
         dados.GetProperty("userId").GetGuid().ShouldBe(b.Id);
         dados.GetProperty("nome").GetString().ShouldBe(b.Dados.Nome);
         dados.GetProperty("nick").GetString().ShouldBe(b.Dados.Nick);
-        EmailsPara(a).ShouldBe(emailsDeA);
+        _factory.EmailsPara(a).ShouldBe(emailsDeA);
 
         // Quem respondeu não ganha nada além do pedido que já tinha.
         (await SemBoasVindasAsync(b)).ShouldHaveSingleItem().Tipo.ShouldBe("amizade_recebida");
@@ -65,7 +65,7 @@ public sealed class AmizadeNotificacoesTests(PostgresFixture postgres) : IDispos
         // Arrange
         var (a, b) = await _factory.CriarDoisUsuariosLogadosAsync();
         await _factory.TornarAmigosAsync(a, b);
-        var (emailsDeA, emailsDeB) = (EmailsPara(a), EmailsPara(b));
+        var (emailsDeA, emailsDeB) = (_factory.EmailsPara(a), _factory.EmailsPara(b));
 
         // Act
         (await _factory.DeleteAsync(a, ClienteDaTaberna.Amigo(b.Id))).EnsureSuccessStatusCode();
@@ -73,12 +73,9 @@ public sealed class AmizadeNotificacoesTests(PostgresFixture postgres) : IDispos
         // Assert
         (await SemBoasVindasAsync(a)).ShouldBeEmpty();
         (await SemBoasVindasAsync(b)).ShouldBeEmpty();
-        EmailsPara(a).ShouldBe(emailsDeA);
-        EmailsPara(b).ShouldBe(emailsDeB);
+        _factory.EmailsPara(a).ShouldBe(emailsDeA);
+        _factory.EmailsPara(b).ShouldBe(emailsDeB);
     }
-
-    private int EmailsPara(UsuarioLogado usuario) =>
-        _factory.Fila.Enfileiradas.Count(m => m.Para == usuario.Dados.Email) + _factory.Emails.Enviadas.Count(m => m.Para == usuario.Dados.Email);
 
     private async Task<List<NotificacaoNoBanco>> SemBoasVindasAsync(UsuarioLogado usuario) =>
         [.. (await _factory.NotificacoesNoBancoAsync(usuario.Id)).Where(n => n.Tipo != "boas_vindas")];

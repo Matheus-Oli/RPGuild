@@ -1,0 +1,44 @@
+using Microsoft.Extensions.Logging;
+
+namespace RPGuild.Application.Campanhas;
+
+/// <summary>
+/// Ponto único de emissão dos eventos de campanha em tempo real. Chame só depois de gravar no banco.
+/// Uma falha ao empurrar é registrada (sem dados pessoais) e não quebra a requisição: o GET continua com tudo.
+/// </summary>
+public sealed class EventosDaCampanha(ICampanhaTempoReal tempoReal, ILogger<EventosDaCampanha> logger)
+{
+    // TODO(saida-de-player): quando o jogador for removido (ou sair), as conexões dele saem dos grupos da campanha e o
+    // grupo recebe MemberChanged com tipo "saiu".
+    public Task JogadorEntrouAsync(Guid campanhaId, MembroDaCampanhaResponse membro, CancellationToken cancellationToken) =>
+        EmpurrarAsync(
+            "membro mudou",
+            () => tempoReal.MembroMudouAsync(new MembroMudouEvento(campanhaId, TiposDeMudancaDeMembro.Entrou, membro), cancellationToken));
+
+    public Task CampanhaAtualizadaAsync(CampanhaAtualizadaEvento evento, CancellationToken cancellationToken) =>
+        EmpurrarAsync("campanha atualizada", () => tempoReal.CampanhaAtualizadaAsync(evento, cancellationToken));
+
+    /// <summary>
+    /// Os convites pendentes apagados junto com a campanha não geram InvitesChanged: vale este evento.
+    /// </summary>
+    public Task CampanhaExcluidaAsync(Guid campanhaId, string campanhaNome, CancellationToken cancellationToken) =>
+        EmpurrarAsync(
+            "campanha excluída", () => tempoReal.CampanhaExcluidaAsync(new CampanhaExcluidaEvento(campanhaId, campanhaNome), cancellationToken));
+
+    public Task ConviteMudouAsync(
+        Guid campanhaId, string acao, ConviteDoEvento convite, CancellationToken cancellationToken) =>
+        EmpurrarAsync(
+            "convites mudaram", () => tempoReal.ConvitesMudaramAsync(new ConvitesMudaramEvento(campanhaId, acao, convite), cancellationToken));
+
+    private async Task EmpurrarAsync(string evento, Func<Task> empurrar)
+    {
+        try
+        {
+            await empurrar();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Falha ao empurrar o evento de campanha {Evento} em tempo real", evento);
+        }
+    }
+}
