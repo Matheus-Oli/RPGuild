@@ -506,7 +506,7 @@ DELETE /notifications/{id}
 **Tempo real (SignalR)**
 
 ```
-/hubs/campaign JoinCampaign(id) · CharacterUpdated · RollCreated · MemberChanged · SessionChanged · DocumentChanged
+/hubs/campaign JoinCampaign(id) · LeaveCampaign(id) · CharacterUpdated · RollCreated · MemberChanged · CampaignUpdated · CampaignDeleted · InvitesChanged · SessionChanged · DocumentChanged
 /hubs/notifications NotificationCreated · UnreadCount · NotificationRead · NotificationsReadAll · NotificationDeleted
 ```
 

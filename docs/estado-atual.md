@@ -36,7 +36,7 @@ O backlog antigo (S0 a S10, fatiado por camada) foi descartado. A nova ordem é:
 | Contas (Identity, JWT + refresh com rotação, recuperação de senha, perfil, troca de e-mail e senha, avatar no Supabase) | Mergeado | #4 |
 | Taberna (amizades) | Mergeado | #5 |
 | Notificações (serviço central da matriz, sininho paginado, fila de e-mail no Hangfire, limpeza de 90 dias, `NotificationHub`) | Mergeado | #6 |
-| Campanhas e convites | Em andamento (parte 1 de 3 pronta: sistemas, CRUD, grade com ordem) | — |
+| Campanhas e convites | PR aberto (partes 1 a 3: CRUD, grade, convites, tempo real) | — |
 | Fichas (base), Sessões e lembretes, Documentos, Saída de player, Rolagens, Conteúdo D&D | A fazer, nesta ordem | — |
 
 **Como o back está sendo feito**

@@ -435,11 +435,14 @@ Nos testes, `NotificacoesDeTeste` grava notificações direto no banco, com o `c
 
 ## Tempo real
 
-SignalR (sem backplane: a API roda numa VM só). O hub `NotificationHub` fica em **`/hubs/notifications`**, com `[Authorize]`. O cliente não chama nenhum método: o hub só empurra os eventos do sininho.
+SignalR (sem backplane: a API roda numa VM só). São dois hubs, os dois com `[Authorize]` e a mesma autenticação:
+
+- `NotificationHub`, em **`/hubs/notifications`**: o sininho. O cliente não chama nenhum método; o hub só empurra os eventos para o usuário.
+- `CampaignHub`, em **`/hubs/campaign`**: o que muda numa campanha aberta. Veja [CampaignHub](#campaignhub).
 
 **Autenticação**
 
-- É o mesmo JWT da API. No navegador, o WebSocket não manda header, então o token vai na query: `/hubs/notifications?access_token=<token>` (no `@microsoft/signalr`, use o `accessTokenFactory`).
+- É o mesmo JWT da API. No navegador, o WebSocket não manda header, então o token vai na query: `/hubs/notifications?access_token=<token>` ou `/hubs/campaign?access_token=<token>` (no `@microsoft/signalr`, use o `accessTokenFactory`).
 - A query `access_token` **só vale em caminhos que começam com `/hubs`** (`JwtBearerEvents.OnMessageReceived`). Num endpoint REST ela é ignorada, e sem header dá 401.
 - Token ausente, inválido ou expirado: a conexão é recusada (401 no negotiate).
 - O token não vai para o log. O único log que imprime a URL com a query é o de início e fim de requisição (`Microsoft.AspNetCore.Hosting.Diagnostics`). O `Program` trava esse log em `Warning`, mesmo que a configuração suba `Microsoft.AspNetCore` para Information.
@@ -461,9 +464,38 @@ SignalR (sem backplane: a API roda numa VM só). O hub `NotificationHub` fica em
 - Ação na notificação de outro usuário (404) não manda nada para ninguém.
 - A emissão fica num lugar só, o `EventosDoSininho` (Application), usado pelo `Notificador` e pelo `NotificacoesService`. A porta é a `INotificacoesTempoReal`, implementada na Api por `HubNotificacoesTempoReal` (`IHubContext<NotificationHub>`).
 - **Falha ao empurrar não quebra a requisição:** o `EventosDoSininho` loga um Warning (só o nome do evento, sem dados pessoais) e segue. O que foi gravado aparece no `GET`.
-- CORS: o hub usa a mesma policy `Front`, com credenciais.
+- CORS: os hubs usam a mesma policy `Front`, com credenciais.
 
-Nos testes, `ConexaoNoHub` abre a conexão pelo TestServer, com transporte LongPolling e o token na query, sem header. Ele guarda os eventos recebidos e tem `EsperarAsync`/`NaoRecebeAsync`, com timeout curto. `LogsCapturados` captura as linhas de log da API.
+### CampaignHub
+
+**O front entra no grupo ao abrir a campanha e sai ao fechar.** Sem `JoinCampaign`, a conexão não recebe nada da campanha.
+
+| Método (o cliente chama) | O que faz |
+| --- | --- |
+| `JoinCampaign(campanhaId)` | Só o mestre ou um jogador, conferido a cada chamada. Põe a conexão no grupo `campaign:{id}` e, se for o mestre, também no `campaign:{id}:mestre`. Quem não participa, ou campanha inexistente, recebe `HubException` com a mensagem genérica "Campanha não encontrada" (não revela que a campanha existe). |
+| `LeaveCampaign(campanhaId)` | Tira a conexão dos dois grupos. Não dá erro se ela não estava neles. |
+
+- Os grupos são por conexão: cada aba (ou aparelho) entra no seu. Os nomes ficam em `GruposDaCampanha` (`Todos(id)` e `Mestre(id)`).
+- Depois de reconectar (por exemplo, com o token novo do refresh), o front chama `JoinCampaign` de novo: a conexão nova não está em grupo nenhum.
+
+**Eventos** (payload em camelCase; saem só **depois** de gravar no banco; nenhum leva e-mail):
+
+| Evento | Quando | Para quem | Payload |
+| --- | --- | --- | --- |
+| `MemberChanged` | aceite de convite (o jogador entrou) | `campaign:{id}` | `{campanhaId, tipo: "entrou", membro}`, com `membro` no formato do `GET /campaigns/{id}/members`: `{userId, nome, nick, avatarUrl, papel, entrouEm, ficha}` |
+| `CampaignUpdated` | `PUT /campaigns/{id}` que mudou algo | `campaign:{id}` | `{id, nome, descricao, sistema: {slug, nome}, capaUrl, bannerUrl}`, sem `papel` (o evento é igual para todos) |
+| `CampaignDeleted` | `DELETE /campaigns/{id}` | `campaign:{id}` | `{campanhaId, campanhaNome}` |
+| `InvitesChanged` | convite criado (na criação da campanha ou depois), aceito, recusado ou cancelado (inclusive pela amizade desfeita) | só `campaign:{id}:mestre` | `{campanhaId, acao: "criado" \| "aceito" \| "recusado" \| "cancelado", convite: {id, status, convidado: {userId, nome, nick, avatarUrl}, criadoEm}}` |
+
+- O `PUT` igual ao estado atual não manda `CampaignUpdated` (nem o aviso nº 17).
+- Os jogadores não recebem `InvitesChanged`: os convites são só do mestre.
+- Na criação da campanha com convidados, ninguém está no grupo ainda, mas o `InvitesChanged` sai do mesmo jeito.
+- Na exclusão, os convites pendentes apagados junto com a campanha não geram `InvitesChanged`: vale o `CampaignDeleted`. Depois dele, `JoinCampaign` na mesma campanha dá "Campanha não encontrada".
+- A emissão fica num lugar só, o `EventosDaCampanha` (Application), usado pelo `CampanhaService` e pelo `ConviteService`. A porta é a `ICampanhaTempoReal`, implementada na Api por `HubCampanhaTempoReal` (`IHubContext<CampaignHub>`). Na amizade desfeita, a Taberna executa, depois de confirmar a transação, o que o `ConviteService` devolve (os avisos nº 12 e o `InvitesChanged`).
+- **Falha ao empurrar não quebra a requisição:** o `EventosDaCampanha` loga um Warning (só o nome do evento, sem dados pessoais) e segue.
+- Saída de jogador fica para o módulo dele (`TODO(saida-de-player)`): as conexões do jogador removido saem dos grupos, e o grupo recebe `MemberChanged` com `tipo: "saiu"`.
+
+Nos testes, `ConexaoNoHub` abre a conexão num dos hubs (`AbrirAsync` com a rota) pelo TestServer, com transporte LongPolling e o token na query, sem header. Ele guarda os eventos recebidos e tem `EsperarAsync`/`NaoRecebeAsync`, com timeout curto, além de `EntrarNaCampanhaAsync`/`SairDaCampanhaAsync` para o hub de campanha. `TempoRealDeTeste.EntrarNaCampanhaAsync` abre e já entra no grupo. `TempoRealGravado` substitui o hub quando ninguém pode estar no grupo. `LogsCapturados` captura as linhas de log da API.
 
 ## Jobs (Hangfire)
 
